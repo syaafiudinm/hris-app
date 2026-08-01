@@ -1,1 +1,66 @@
 @import "tailwindcss";
+
+/*
+ * Tema HRIS — biru muda & putih.
+ * Seri data memakai satu ramp biru (divalidasi: monotone lightness,
+ * ujung terang tetap >= 2:1 terhadap permukaan putih).
+ */
+@theme {
+    --font-sans:
+        system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+        sans-serif;
+
+    /* Permukaan */
+    --color-plane: #f4f8fd;
+    --color-surface: #ffffff;
+    --color-surface-soft: #f0f6fe;
+    --color-hairline: #e2ecf8;
+    --color-hairline-strong: #cfe0f4;
+
+    /* Tinta */
+    --color-ink: #0d1b2a;
+    --color-ink-soft: #55677d;
+    --color-ink-muted: #8fa1b6;
+
+    /* Ramp biru (seri data) */
+    --color-brand-50: #eff6ff;
+    --color-brand-100: #cde2fb;
+    --color-brand-200: #9ec5f4;
+    --color-brand-300: #6da7ec;
+    --color-brand-400: #3987e5;
+    --color-brand-500: #2a78d6;
+    --color-brand-600: #256abf;
+    --color-brand-700: #184f95;
+
+    /*
+     * Ramp ordinal untuk tahapan pipeline ATS (Applied -> Hired).
+     * Divalidasi: monotone L, jarak antar-step >= 0.06, ujung terang 2.11:1.
+     * Step 1 di bawah 3:1 sehingga nilai selalu ditulis sebagai label langsung.
+     */
+    --color-stage-1: #86b6ef;
+    --color-stage-2: #5598e7;
+    --color-stage-3: #2a78d6;
+    --color-stage-4: #1c5cab;
+    --color-stage-5: #104281;
+
+    /* Status — selalu berpasangan dengan ikon + label */
+    --color-good: #0ca30c;
+    --color-warning: #fab219;
+    --color-serious: #ec835a;
+    --color-critical: #d03b3b;
+}
+
+html {
+    background-color: var(--color-plane);
+}
+
+body {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Angka pada kolom tabel & tick sumbu harus sejajar vertikal. */
+.tabular {
+    font-variant-numeric: tabular-nums;
+}

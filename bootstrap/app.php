@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(
             append: [\App\Http\Middleware\HandleInertiaRequests::class],
         );
+
+        $middleware->alias([
+            "role" => \App\Http\Middleware\EnsureUserHasRole::class,
+        ]);
+
+        $middleware->redirectGuestsTo(fn () => route("login"));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
