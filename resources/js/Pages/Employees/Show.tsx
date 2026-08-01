@@ -33,6 +33,14 @@ type Props = {
         taxScheme: string;
         taxPercentage: number;
     } | null;
+    exit: {
+        id: number;
+        typeLabel: string;
+        lastWorkingDate: string;
+        tenure: string;
+        status: string;
+        paklaringNumber: string | null;
+    } | null;
     recentPayrolls: {
         id: number;
         period: string;
@@ -52,6 +60,7 @@ const SCHEMA_LABELS: Record<string, string> = {
 export default function EmployeeShow({
     employee,
     mitraSchema,
+    exit,
     recentPayrolls,
 }: Props) {
     return (
@@ -159,6 +168,54 @@ export default function EmployeeShow({
                                     {mitraSchema.taxPercentage}%
                                 </Detail>
                             </dl>
+                        </Card>
+                    )}
+
+                    {exit && (
+                        <Card
+                            title="Proses keluar"
+                            subtitle="Offboarding dan surat keterangan kerja"
+                            action={
+                                <LinkButton href="/proses-keluar">
+                                    Kelola
+                                </LinkButton>
+                            }
+                        >
+                            <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                                <Detail label="Jenis">{exit.typeLabel}</Detail>
+                                <Detail label="Status">
+                                    <Badge
+                                        tone={
+                                            exit.status === "completed"
+                                                ? "good"
+                                                : "warning"
+                                        }
+                                    >
+                                        {exit.status}
+                                    </Badge>
+                                </Detail>
+                                <Detail label="Hari kerja terakhir">
+                                    {exit.lastWorkingDate}
+                                </Detail>
+                                <Detail label="Masa kerja">{exit.tenure}</Detail>
+                            </dl>
+
+                            {exit.paklaringNumber && (
+                                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
+                                    <p className="text-xs text-ink-soft">
+                                        Paklaring{" "}
+                                        <span className="tabular font-medium text-ink">
+                                            {exit.paklaringNumber}
+                                        </span>
+                                    </p>
+                                    <a
+                                        href={`/proses-keluar/${exit.id}/paklaring`}
+                                        className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
+                                    >
+                                        Unduh PDF
+                                    </a>
+                                </div>
+                            )}
                         </Card>
                     )}
 

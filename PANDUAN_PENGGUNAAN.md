@@ -306,7 +306,48 @@ Pada form **Konversi ke Karyawan**:
 Sistem membuat data karyawan otomatis dari data pelamar — tanpa input ulang — lengkap
 dengan NIK baru dan tanggal berakhir kontrak sesuai durasi entitas.
 
-### 5.7 Kelola Knowledge Center
+### 5.7 Proses Keluar & Paklaring
+
+Menu **Manajemen → Proses Keluar**. Dipakai saat karyawan mengundurkan diri,
+kontraknya berakhir, di-PHK, atau pensiun.
+
+Prosesnya sengaja **dua tahap** agar surat tidak terbit sebelum waktunya:
+
+**Tahap 1 — Draft.** Klik **Catat proses keluar**, pilih karyawan (hanya yang masih
+aktif dan belum punya catatan keluar), lalu isi:
+
+* **Jenis** — Mengundurkan Diri / Kontrak Berakhir / PHK / Pensiun.
+* **Tanggal pengajuan** — untuk pengunduran diri; kosongkan bila tidak relevan.
+* **Hari kerja terakhir** — dipakai menghitung masa kerja pada paklaring.
+* **Alasan** — dicatat sebagai riwayat.
+* **Catatan internal** — hasil exit interview atau serah terima; **tidak dicetak**
+  pada paklaring.
+
+Pada tahap ini karyawan **masih berstatus aktif** dan datanya masih bisa diperbaiki.
+
+**Tahap 2 — Tuntaskan.** Klik **Tuntaskan & terbitkan**. Sistem otomatis:
+
+* mengubah status karyawan menjadi `resigned` (resign/PHK/pensiun) atau `expired`
+  (kontrak berakhir);
+* menerbitkan nomor paklaring berformat `001/PKL-HR/VIII/2026`, berurutan per tahun;
+* mengaktifkan tombol **Paklaring PDF**.
+
+> **Paklaring dapat dicetak ulang kapan saja dengan nomor yang sama.** Mantan karyawan
+> sering membutuhkannya lagi bertahun-tahun kemudian — untuk klaim JHT BPJS
+> Ketenagakerjaan, melamar kerja, atau pengajuan kredit. Nomor tidak pernah berubah
+> agar surat lama tetap dapat diverifikasi.
+
+Isi surat menyesuaikan jenisnya: untuk resign, kontrak berakhir, dan pensiun
+dicantumkan keterangan kinerja baik; untuk PHK kalimat itu tidak disertakan.
+
+**Salah catat?** Klik **Buka kembali** — karyawan kembali aktif dan data bisa diperbaiki.
+Nomor surat sengaja dipertahankan supaya paklaring yang terlanjur beredar tetap terlacak.
+Draft yang belum dituntaskan boleh dihapus; yang sudah tuntas tidak bisa.
+
+Kartu **Kontrak habis H-30** di atas menunjukkan karyawan yang kontraknya segera
+berakhir tapi belum dibuatkan proses keluar.
+
+### 5.8 Kelola Knowledge Center
 
 Menu **Manajemen → Kelola Knowledge**.
 
@@ -418,6 +459,14 @@ riwayat perpindahannya jelas.
 **Saya menjalankan payroll dua kali, apakah slip jadi dobel?**
 Tidak. Slip yang sudah ada akan diperbarui, dan slip berstatus *paid* dilewati kecuali
 Anda mencentang opsi timpa.
+
+**Saya sudah menandai karyawan keluar, tapi statusnya masih aktif.**
+Catatan proses keluar masih berstatus *draft*. Status karyawan baru berubah setelah
+Anda klik **Tuntaskan & terbitkan** — itu juga saat nomor paklaring diterbitkan.
+
+**Mantan karyawan minta paklaring lagi, apakah perlu dibuat ulang?**
+Tidak. Buka menu Proses Keluar, cari namanya, lalu klik **Paklaring PDF**. Surat
+tercetak dengan nomor dan isi yang sama persis seperti penerbitan pertama.
 
 **Menu tertentu tidak muncul di sisi kiri.**
 Menu menyesuaikan peran. Manager tidak melihat Payroll dan Tenaga Kerja; karyawan

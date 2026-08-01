@@ -48,7 +48,7 @@ dan 2 lokasi kantor untuk geofence.
 
 #### Core Workforce Database
 
-Tiga belas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada `users`:
+Empat belas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada `users`:
 
 | Tabel | Peran |
 | :--- | :--- |
@@ -63,6 +63,7 @@ Tiga belas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada 
 | `office_locations` | Titik geofence + radius |
 | `export_logs` | Audit log ekspor (Masterplan §3) |
 | `announcements`, `knowledge_documents` | Knowledge Center + penargetan audiens |
+| `employee_exits` | Proses offboarding & penerbitan paklaring |
 | `users.role` | Sumber kebenaran RBAC |
 
 #### RBAC
@@ -271,6 +272,32 @@ sana. Aturan BPJS sengaja tidak ikut diubah dan tetap mengikuti Masterplan §1.2
 
 ---
 
+### 2.7 Exit / Paklaring (Modul 1)
+
+Menutup ujung siklus yang berlawanan dengan ATS: kalau ATS menangani orang **masuk**,
+bagian ini menangani orang **keluar**.
+
+Alur dua tahap, `app/Services/ExitService.php`:
+
+| Tahap | Yang terjadi |
+| :--- | :--- |
+| **Draft** | Jenis, hari kerja terakhir, alasan, dan catatan internal dicatat. Karyawan masih aktif. |
+| **Completed** | Status karyawan berubah otomatis (`resigned` / `expired`), nomor paklaring terbit, PDF aktif. |
+
+**Nomor surat** berformat `001/PKL-HR/VIII/2026`, berurutan per tahun, diterbitkan
+**sekali** lalu dipakai selamanya — mantan karyawan sering meminta cetak ulang untuk
+klaim JHT, melamar kerja, atau pengajuan kredit, dan surat lama harus tetap dapat
+diverifikasi. Membuka kembali proses tidak menghapus nomor tersebut.
+
+**Isi paklaring** menyesuaikan penyebab keluar: resign, kontrak berakhir, dan pensiun
+memuat keterangan kinerja baik; PHK tidak. Masa kerja dihitung dari `join_date`
+sampai hari kerja terakhir.
+
+Catatan cakupan: **Manajemen Aset & Clearance Sheet** sengaja belum dikerjakan, jadi
+proses keluar di sini belum menyertakan checklist pengembalian barang.
+
+---
+
 ## 3. Hasil Verifikasi
 
 Diuji lewat HTTP kernel Laravel, bukan asumsi:
@@ -294,9 +321,10 @@ Geofence      0 m DI DALAM · 400 m di luar · Surabaya di luar
 ### Test otomatis (Pest)
 
 ```
-Tests: 33 passed (100 assertions)
+Tests: 43 passed (136 assertions)
 
 JobVacancyTest         buat lowongan · alur draft/open/closed · proteksi hapus · RBAC
+EmployeeExitTest       alur draft->completed · nomor surat stabil · masa kerja · RBAC
 KnowledgeCenterTest    penargetan audiens · disk privat · RBAC · kebijakan cuti baru
 RecruitmentTest        portal karier · pipeline · konversi hired
 RecruitmentGuardTest   regresi ATS:
@@ -322,7 +350,7 @@ Query per halaman setelah perbaikan N+1: `/rekrutmen` 27 → 18, `/karier` 10 �
 | **PPh 21 TER disederhanakan** | Baru memakai bracket TER A umum; belum membedakan TER B/C per status PTKP. Perlu tabel lengkap + field PTKP sebelum produksi. |
 | **Ekspor masih sinkron** | Aman pada volume saat ini, tapi Tips §7.2 menyarankan background job queue untuk ribuan baris. |
 | **Kuantitas mitra unit/milestone manual** | Belum ada UI input kuantitas per periode; sementara dihitung 1× penuh. |
-| **Cakupan tes masih parsial** | 33 test menutup ATS dan Knowledge Center. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
+| **Cakupan tes masih parsial** | 43 test menutup ATS, Knowledge Center, dan Exit/Paklaring. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
 | **Kanban belum drag-and-drop** | Perpindahan tahap lewat tombol/select, bukan seret-lepas. Fungsional, tapi belum senyaman papan kanban penuh. |
 | **Belum ada notification engine** | Peringatan kontrak H-30/H-14 baru tampil di dashboard, belum dikirim via email/WhatsApp. |
 | **Lamaran publik belum di-rate-limit** | Honeypot sudah ada, tapi belum ada throttle per IP pada `/karier/{id}/apply`. |
@@ -350,8 +378,8 @@ Bagian Masterplan §2.1 yang tidak masuk daftar Fase 1:
 
 * **Manajemen Aset & Clearance Sheet** (~4 hari) — inventaris fasilitas yang dipinjamkan
   dan checklist pengembalian saat offboarding. Butuh tabel `company_assets` +
-  `asset_assignments`.
-* **Exit / Paklaring** (~3 hari) — proses offboarding dan generasi surat keterangan kerja.
+  `asset_assignments`. Bila dikerjakan, checklist ini wajar dijadikan syarat sebelum
+  proses keluar dapat dituntaskan.
 
 ---
 
@@ -379,6 +407,7 @@ app/
 │   ├── Auth/LoginController.php
 │   ├── AttendanceController.php          # rekap, self-service, clock in/out, 3 ekspor
 │   ├── CareerController.php              # portal karier publik + form lamaran
+│   ├── ExitController.php                # offboarding + paklaring
 │   ├── JobVacancyController.php          # CRUD lowongan + alur publikasi
 │   ├── KnowledgeController.php           # pengumuman + dokumen + unduh privat
 │   ├── RecruitmentController.php         # pipeline, konversi, PDF, unduh CV, 3 ekspor
@@ -392,6 +421,7 @@ app/
 ├── Services/
 │   ├── AttendanceService.php             # geofence + anti-fake GPS
 │   ├── ExportService.php                 # xlsx/csv/pdf + audit log
+│   ├── ExitService.php                   # tuntaskan exit + nomor paklaring
 │   ├── HiredConversionService.php        # pelamar -> karyawan, satu transaksi
 │   ├── LeavePolicyService.php            # aturan cuti per entitas
 │   ├── PayrollCalculator.php             # BPJS + PPh 21 TER + skema mitra
@@ -406,16 +436,18 @@ resources/
 │   ├── Pages/                            # Auth, Employees, Attendance, Payroll,
 │   │                                     # Leaves, MitraSchemas, EmploymentTypes,
 │   │                                     # Career (publik), Recruitment, Vacancies,
-│   │                                     # Knowledge (baca + kelola)
+│   │                                     # Knowledge (baca + kelola), Exits
 │   └── lib/format.ts                     # format rupiah & angka id-ID
 └── views/
     ├── documents/payslip.blade.php
     ├── documents/payment-voucher.blade.php
     ├── documents/offering-letter.blade.php
     ├── documents/contract-{probation,pkwt,mitra}.blade.php
+    ├── documents/paklaring.blade.php
     └── exports/table.blade.php           # template PDF generik
 
 tests/Feature/
+├── EmployeeExitTest.php                  # offboarding & paklaring
 ├── JobVacancyTest.php                    # manajemen lowongan
 ├── KnowledgeCenterTest.php               # audiens, disk privat, kebijakan cuti
 ├── RecruitmentTest.php                   # alur utama ATS
@@ -424,4 +456,4 @@ tests/Feature/
 
 ---
 
-*Diperbarui 2 Agustus 2026 — Modul 1–5 aktif; menyisakan aset/clearance dan exit/paklaring.*
+*Diperbarui 2 Agustus 2026 — Modul 1–5 aktif; menyisakan Manajemen Aset & Clearance Sheet.*

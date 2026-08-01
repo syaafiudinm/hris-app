@@ -56,6 +56,11 @@ class Employee extends Model
         return $this->hasOne(MitraPayrollSchema::class);
     }
 
+    public function exit(): HasOne
+    {
+        return $this->hasOne(EmployeeExit::class);
+    }
+
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);

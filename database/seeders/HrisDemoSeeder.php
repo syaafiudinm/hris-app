@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\KnowledgeDocument;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\EmployeeExit;
 use App\Models\EmploymentType;
 use App\Models\JobVacancy;
 use App\Models\LeaveRequest;
@@ -15,6 +16,7 @@ use App\Models\MitraPayrollSchema;
 use App\Models\OfficeLocation;
 use App\Models\Payroll;
 use App\Models\User;
+use App\Services\ExitService;
 use App\Services\PayrollCalculator;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -51,6 +53,55 @@ class HrisDemoSeeder extends Seeder
         $this->seedLeaveRequests($employees);
         $this->seedRecruitment();
         $this->seedKnowledgeCenter();
+        $this->seedExits();
+    }
+
+    /**
+     * Contoh proses keluar: satu masih draft, dua sudah tuntas dengan
+     * paklaring terbit.
+     */
+    private function seedExits(): void
+    {
+        $hr = Employee::where('email', 'hr@perusahaan.co.id')->first();
+        $service = new ExitService;
+        $today = CarbonImmutable::now();
+
+        // Ambil karyawan aktif yang tidak punya akun login, agar akun demo
+        // tetap bisa dipakai masuk.
+        $candidates = Employee::active()
+            ->whereNull('user_id')
+            ->whereDoesntHave('exit')
+            ->inRandomOrder()
+            ->limit(3)
+            ->get();
+
+        $definitions = [
+            ['exit_type' => 'resign', 'complete' => true, 'reason' => 'Melanjutkan studi pascasarjana.', 'days' => 45],
+            ['exit_type' => 'contract_end', 'complete' => true, 'reason' => 'Masa perjanjian kerja berakhir dan tidak diperpanjang.', 'days' => 20],
+            ['exit_type' => 'resign', 'complete' => false, 'reason' => 'Pindah domisili ke luar kota.', 'days' => -14],
+        ];
+
+        foreach ($candidates as $index => $employee) {
+            $definition = $definitions[$index] ?? $definitions[0];
+            $lastDay = $today->subDays($definition['days']);
+
+            $exit = EmployeeExit::create([
+                'employee_id' => $employee->id,
+                'exit_type' => $definition['exit_type'],
+                'submitted_date' => $definition['exit_type'] === 'resign'
+                    ? $lastDay->subDays(30)
+                    : null,
+                'last_working_date' => $lastDay,
+                'reason' => $definition['reason'],
+                'notes' => 'Serah terima pekerjaan selesai.',
+                'status' => 'draft',
+                'processed_by' => $hr?->id,
+            ]);
+
+            if ($definition['complete']) {
+                $service->complete($exit);
+            }
+        }
     }
 
     /**

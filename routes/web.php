@@ -6,6 +6,7 @@ use App\Http\Controllers\CareerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmploymentTypeController;
+use App\Http\Controllers\ExitController;
 use App\Http\Controllers\JobVacancyController;
 use App\Http\Controllers\KnowledgeController;
 use App\Http\Controllers\LeaveRequestController;
@@ -166,9 +167,32 @@ Route::middleware("auth")->group(function () {
 
         /*
          |------------------------------------------------------------------
-         | Rekrutmen (ATS) — Modul 4
+         | Exit / Paklaring (Modul 1)
          |------------------------------------------------------------------
          */
+        Route::get("/proses-keluar", [ExitController::class, "index"])->name(
+            "exits.index",
+        );
+        Route::post("/proses-keluar", [ExitController::class, "store"])->name(
+            "exits.store",
+        );
+        Route::patch("/proses-keluar/{exit}", [
+            ExitController::class,
+            "update",
+        ])->name("exits.update");
+        Route::patch("/proses-keluar/{exit}/status", [
+            ExitController::class,
+            "updateStatus",
+        ])->name("exits.status");
+        Route::delete("/proses-keluar/{exit}", [
+            ExitController::class,
+            "destroy",
+        ])->name("exits.destroy");
+        Route::get("/proses-keluar/{exit}/paklaring", [
+            ExitController::class,
+            "paklaring",
+        ])->name("exits.paklaring");
+
         /*
          |------------------------------------------------------------------
          | Knowledge Center — pengelolaan konten (Modul 5)
@@ -224,6 +248,11 @@ Route::middleware("auth")->group(function () {
             "destroy",
         ])->name("vacancies.destroy");
 
+        /*
+         |------------------------------------------------------------------
+         | Rekrutmen (ATS) — Modul 4
+         |------------------------------------------------------------------
+         */
         Route::get("/rekrutmen", [
             RecruitmentController::class,
             "index",
@@ -320,6 +349,10 @@ Route::middleware("auth")->group(function () {
                     RecruitmentController::class,
                     "exportConversionRate",
                 ])->name("conversion-rate");
+                Route::get("/proses-keluar", [
+                    ExitController::class,
+                    "export",
+                ])->name("exits");
             });
         });
 });

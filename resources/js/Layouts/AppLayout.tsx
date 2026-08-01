@@ -59,6 +59,12 @@ const navigation: NavGroup[] = [
                 roles: ["super_admin"],
             },
             {
+                label: "Proses Keluar",
+                href: "/proses-keluar",
+                icon: IconUsers,
+                roles: ["super_admin"],
+            },
+            {
                 label: "Rekap Absensi",
                 href: "/absensi",
                 icon: IconClock,

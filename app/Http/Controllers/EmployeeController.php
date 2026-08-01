@@ -73,7 +73,7 @@ class EmployeeController extends Controller
 
     public function show(Employee $employee): Response
     {
-        $employee->load(['employmentType', 'department', 'mitraPayrollSchema']);
+        $employee->load(['employmentType', 'department', 'mitraPayrollSchema', 'exit']);
 
         return Inertia::render('Employees/Show', [
             'employee' => [
@@ -103,6 +103,14 @@ class EmployeeController extends Controller
                 'unitLabel' => $employee->mitraPayrollSchema->unit_label,
                 'taxScheme' => $employee->mitraPayrollSchema->tax_scheme,
                 'taxPercentage' => (float) $employee->mitraPayrollSchema->custom_tax_percentage,
+            ] : null,
+            'exit' => $employee->exit ? [
+                'id' => $employee->exit->id,
+                'typeLabel' => $employee->exit->typeLabel(),
+                'lastWorkingDate' => $employee->exit->last_working_date->translatedFormat('d F Y'),
+                'tenure' => $employee->exit->tenure()['label'],
+                'status' => $employee->exit->status,
+                'paklaringNumber' => $employee->exit->paklaring_number,
             ] : null,
             'recentPayrolls' => $employee->payrolls()
                 ->orderByDesc('period_year')
