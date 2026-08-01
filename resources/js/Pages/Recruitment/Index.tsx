@@ -1,10 +1,19 @@
-import { Head, Link, router, useForm } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import { useState } from "react";
 import AppLayout from "@/Layouts/AppLayout";
 import Card from "@/Components/Card";
 import StatTile from "@/Components/StatTile";
 import ExportMenu from "@/Components/ExportMenu";
-import { Badge, Button, EmptyState, Field, Input, Select } from "@/Components/ui";
+import ConversionModal, {
+    type ConversionOptions,
+} from "@/Components/ConversionModal";
+import {
+    Badge,
+    Button,
+    EmptyState,
+    LinkButton,
+    Select,
+} from "@/Components/ui";
 import { IconFunnel, IconUsers, IconCheck, IconAlert } from "@/Components/Icons";
 import { angka } from "@/lib/format";
 
@@ -17,7 +26,7 @@ type ApplicantCard = {
     vacancyTitle: string | null;
     vacancyCategory: string | null;
     department: string | null;
-    cvPath: string | null;
+    hasCv: boolean;
     convertedEmployeeId: number | null;
     appliedAt: string | null;
     stageChangedAt: string | null;
@@ -39,25 +48,12 @@ type VacancySummary = {
     hiredCount: number;
 };
 
-type EmploymentTypeOption = {
-    id: number;
-    name: string;
-    code: string;
-    category: string;
-    duration_months: number | null;
-};
-
 type Props = {
     pipeline: PipelineStage[];
     rejected: ApplicantCard[];
     vacancies: VacancySummary[];
     filters: { vacancy_id: number | null; department_id: number | null };
-    options: {
-        departments: { id: number; name: string }[];
-        employmentTypes: EmploymentTypeOption[];
-        schemaTypes: string[];
-        taxSchemes: string[];
-    };
+    options: ConversionOptions;
     stats: {
         totalApplicants: number;
         totalHired: number;
@@ -83,21 +79,6 @@ const STAGE_LABELS: Record<string, string> = {
     offering: "Offering",
     hired: "Hired",
     rejected: "Rejected",
-};
-
-const SCHEMA_LABELS: Record<string, string> = {
-    fixed_project: "Fixed Project Fee",
-    hourly: "Hourly Rate",
-    daily: "Daily Rate",
-    milestone: "Deliverable / Milestone",
-    unit: "Unit / Output",
-};
-
-const TAX_LABELS: Record<string, string> = {
-    pph21_berkesinambungan: "PPh 21 (Berkesinambungan)",
-    pph21_tidak_berkesinambungan: "PPh 21 (Tidak Berkesinambungan)",
-    pph23: "PPh 23",
-    bebas_pajak: "Bebas Pajak",
 };
 
 export default function RecruitmentIndex({
@@ -133,13 +114,17 @@ export default function RecruitmentIndex({
             title="Rekrutmen (ATS)"
             subtitle="Candidate Pipeline & Hiring Management"
             actions={
-                <ExportMenu
-                    targets={[
-                        { label: "Database Pelamar", url: "/export/pelamar" },
-                        { label: "Performa Lowongan", url: "/export/lowongan-performa" },
-                        { label: "Conversion Rate", url: "/export/conversion-rate" },
-                    ]}
-                />
+                <div className="flex items-center gap-2">
+                    <ExportMenu
+                        targets={[
+                            { label: "Database Pelamar", url: "/export/pelamar" },
+                            { label: "Performa Lowongan", url: "/export/lowongan-performa" },
+                            { label: "Conversion Rate", url: "/export/conversion-rate" },
+                        ]}
+                        params={filters}
+                    />
+                    <LinkButton href="/lowongan">Kelola lowongan</LinkButton>
+                </div>
             }
         >
             <Head title="Rekrutmen" />
@@ -318,10 +303,7 @@ export default function RecruitmentIndex({
             {converting && (
                 <ConversionModal
                     applicant={converting}
-                    employmentTypes={options.employmentTypes}
-                    departments={options.departments}
-                    schemaTypes={options.schemaTypes}
-                    taxSchemes={options.taxSchemes}
+                    options={options}
                     onClose={() => setConverting(null)}
                 />
             )}
@@ -370,9 +352,9 @@ function KanbanCard({
                 </select>
             </div>
 
-            {applicant.cvPath && (
+            {applicant.hasCv && (
                 <a
-                    href={`/storage/${applicant.cvPath}`}
+                    href={`/rekrutmen/${applicant.id}/cv`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-1.5 inline-block text-[10px] font-medium text-brand-600 hover:text-brand-700"
@@ -381,170 +363,6 @@ function KanbanCard({
                     📄 Lihat CV
                 </a>
             )}
-        </div>
-    );
-}
-
-function ConversionModal({
-    applicant,
-    employmentTypes,
-    departments,
-    schemaTypes,
-    taxSchemes,
-    onClose,
-}: {
-    applicant: ApplicantCard;
-    employmentTypes: EmploymentTypeOption[];
-    departments: { id: number; name: string }[];
-    schemaTypes: string[];
-    taxSchemes: string[];
-    onClose: () => void;
-}) {
-    const { data, setData, post, processing, errors } = useForm({
-        employment_type_id: "",
-        department_id: "",
-        position: "",
-        basic_salary: 0,
-        // Mitra fields
-        schema_type: "hourly",
-        rate_per_unit: 0,
-        unit_label: "jam",
-        tax_scheme: "pph21_tidak_berkesinambungan",
-        custom_tax_percentage: 2.5,
-    });
-
-    const selectedType = employmentTypes.find(
-        (t) => t.id === Number(data.employment_type_id),
-    );
-    const isMitra = selectedType?.category === "mitra";
-
-    function submit(event: React.FormEvent) {
-        event.preventDefault();
-        post(`/rekrutmen/${applicant.id}/convert`, {
-            preserveScroll: true,
-            onSuccess: onClose,
-        });
-    }
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 backdrop-blur-sm">
-            <div className="mx-4 w-full max-w-lg rounded-2xl border border-hairline bg-surface p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-                <h2 className="text-lg font-semibold text-ink">
-                    Konversi ke Karyawan
-                </h2>
-                <p className="mt-1 text-xs text-ink-soft">
-                    {applicant.name} — {applicant.vacancyTitle}
-                </p>
-
-                <form onSubmit={submit} className="mt-5 space-y-4">
-                    <Field label="Entitas kerja" error={errors.employment_type_id} required>
-                        <Select
-                            value={data.employment_type_id}
-                            onChange={(e) => setData("employment_type_id", e.target.value)}
-                            required
-                        >
-                            <option value="">Pilih entitas…</option>
-                            {employmentTypes.map((t) => (
-                                <option key={t.id} value={t.id}>
-                                    {t.name}
-                                    {t.duration_months ? ` (${t.duration_months} bulan)` : ""}
-                                </option>
-                            ))}
-                        </Select>
-                    </Field>
-
-                    <Field label="Divisi" error={errors.department_id}>
-                        <Select
-                            value={data.department_id}
-                            onChange={(e) => setData("department_id", e.target.value)}
-                        >
-                            <option value="">Pilih divisi…</option>
-                            {departments.map((d) => (
-                                <option key={d.id} value={d.id}>
-                                    {d.name}
-                                </option>
-                            ))}
-                        </Select>
-                    </Field>
-
-                    <Field label="Jabatan" error={errors.position}>
-                        <Input
-                            value={data.position}
-                            onChange={(e) => setData("position", e.target.value)}
-                            placeholder="mis. Backend Engineer"
-                        />
-                    </Field>
-
-                    <Field label="Gaji pokok" error={errors.basic_salary} required>
-                        <Input
-                            type="number"
-                            min={0}
-                            step={100000}
-                            value={data.basic_salary}
-                            onChange={(e) => setData("basic_salary", Number(e.target.value))}
-                        />
-                    </Field>
-
-                    {/* Mitra-specific fields */}
-                    {isMitra && (
-                        <div className="rounded-xl border border-hairline bg-surface-soft p-4 space-y-3">
-                            <p className="text-xs font-semibold text-ink">
-                                Skema Pembayaran Mitra
-                            </p>
-                            <Field label="Tipe skema" error={errors.schema_type}>
-                                <Select
-                                    value={data.schema_type}
-                                    onChange={(e) => setData("schema_type", e.target.value)}
-                                >
-                                    {schemaTypes.map((type) => (
-                                        <option key={type} value={type}>
-                                            {SCHEMA_LABELS[type] ?? type}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </Field>
-                            <Field label="Tarif" error={errors.rate_per_unit}>
-                                <Input
-                                    type="number"
-                                    min={0}
-                                    step={1000}
-                                    value={data.rate_per_unit}
-                                    onChange={(e) =>
-                                        setData("rate_per_unit", Number(e.target.value))
-                                    }
-                                />
-                            </Field>
-                            <Field label="Satuan" error={errors.unit_label}>
-                                <Input
-                                    value={data.unit_label}
-                                    onChange={(e) => setData("unit_label", e.target.value)}
-                                />
-                            </Field>
-                            <Field label="Skema pajak" error={errors.tax_scheme}>
-                                <Select
-                                    value={data.tax_scheme}
-                                    onChange={(e) => setData("tax_scheme", e.target.value)}
-                                >
-                                    {taxSchemes.map((scheme) => (
-                                        <option key={scheme} value={scheme}>
-                                            {TAX_LABELS[scheme] ?? scheme}
-                                        </option>
-                                    ))}
-                                </Select>
-                            </Field>
-                        </div>
-                    )}
-
-                    <div className="flex gap-2 pt-2">
-                        <Button type="submit" disabled={processing}>
-                            {processing ? "Mengkonversi…" : "Konversi"}
-                        </Button>
-                        <Button type="button" variant="secondary" onClick={onClose}>
-                            Batal
-                        </Button>
-                    </div>
-                </form>
-            </div>
         </div>
     );
 }

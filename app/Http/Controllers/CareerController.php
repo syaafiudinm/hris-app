@@ -23,6 +23,7 @@ class CareerController extends Controller
 
         $vacancies = JobVacancy::where('status', 'open')
             ->with('department')
+            ->withCount('applicants')
             ->when($category, fn ($query, $cat) => $query->where('offered_category', $cat))
             ->orderByDesc('published_at')
             ->get()
@@ -36,7 +37,7 @@ class CareerController extends Controller
                 'quota' => $vacancy->quota,
                 'description' => $vacancy->description,
                 'publishedAt' => $vacancy->published_at?->translatedFormat('d M Y'),
-                'applicantCount' => $vacancy->applicants()->count(),
+                'applicantCount' => $vacancy->applicants_count,
             ]);
 
         return Inertia::render('Career/Index', [
@@ -93,7 +94,9 @@ class CareerController extends Controller
             'cv' => ['required', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
         ]);
 
-        $cvPath = $request->file('cv')->store('applicant-cv', 'public');
+        // CV berisi data pribadi pelamar, jadi disimpan di disk privat.
+        // Unduhannya lewat route ber-RBAC, bukan URL /storage yang terbuka.
+        $cvPath = $request->file('cv')->store('applicant-cv', 'local');
 
         Applicant::create([
             'job_vacancy_id' => $vacancy->id,

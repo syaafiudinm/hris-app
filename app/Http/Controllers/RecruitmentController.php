@@ -7,12 +7,13 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmploymentType;
 use App\Models\JobVacancy;
-use App\Models\MitraPayrollSchema;
 use App\Services\ExportService;
 use App\Services\HiredConversionService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -56,7 +57,7 @@ class RecruitmentController extends Controller
                 'vacancyTitle' => $a->jobVacancy?->title,
                 'vacancyCategory' => $a->jobVacancy?->offered_category,
                 'department' => $a->jobVacancy?->department?->name,
-                'cvPath' => $a->cv_path,
+                'hasCv' => (bool) $a->cv_path,
                 'convertedEmployeeId' => $a->converted_employee_id,
                 'appliedAt' => $a->created_at?->translatedFormat('d M Y'),
                 'stageChangedAt' => $a->stage_changed_at?->translatedFormat('d M Y H:i'),
@@ -77,6 +78,11 @@ class RecruitmentController extends Controller
         $rejected = $applicants->where('stage', 'rejected')->values()->all();
 
         $vacancies = JobVacancy::with('department')
+            // withCount menghindari dua query tambahan per lowongan.
+            ->withCount([
+                'applicants',
+                'applicants as hired_count' => fn ($query) => $query->where('stage', 'hired'),
+            ])
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (JobVacancy $v) => [
@@ -85,8 +91,8 @@ class RecruitmentController extends Controller
                 'department' => $v->department?->name,
                 'status' => $v->status,
                 'category' => $v->offered_category,
-                'applicantCount' => $v->applicants()->count(),
-                'hiredCount' => $v->applicants()->where('stage', 'hired')->count(),
+                'applicantCount' => $v->applicants_count,
+                'hiredCount' => $v->hired_count,
             ]);
 
         return Inertia::render('Recruitment/Index', [
@@ -97,12 +103,7 @@ class RecruitmentController extends Controller
                 'vacancy_id' => $vacancyId,
                 'department_id' => $departmentId,
             ],
-            'options' => [
-                'departments' => Department::orderBy('name')->get(['id', 'name'])->all(),
-                'employmentTypes' => EmploymentType::orderBy('id')->get(['id', 'name', 'code', 'category', 'duration_months'])->all(),
-                'schemaTypes' => \App\Http\Controllers\MitraPayrollSchemaController::SCHEMA_TYPES,
-                'taxSchemes' => \App\Http\Controllers\MitraPayrollSchemaController::TAX_SCHEMES,
-            ],
+            'options' => $this->conversionOptions(),
             'stats' => [
                 'totalApplicants' => Applicant::count(),
                 'totalHired' => Applicant::where('stage', 'hired')->count(),
@@ -129,7 +130,7 @@ class RecruitmentController extends Controller
                 'phone' => $applicant->phone,
                 'stage' => $applicant->stage,
                 'stageLabel' => self::STAGE_LABELS[$applicant->stage] ?? $applicant->stage,
-                'cvPath' => $applicant->cv_path,
+                'hasCv' => (bool) $applicant->cv_path,
                 'notes' => $applicant->notes ?? [],
                 'stageHistory' => $applicant->stage_history ?? [],
                 'appliedAt' => $applicant->created_at?->translatedFormat('d F Y H:i'),
@@ -149,7 +150,27 @@ class RecruitmentController extends Controller
             ],
             'stages' => self::STAGES,
             'stageLabels' => self::STAGE_LABELS,
+            // Sama dengan papan pipeline, supaya form konversi di halaman ini
+            // menghasilkan data karyawan yang identik.
+            'options' => $this->conversionOptions(),
         ]);
+    }
+
+    /**
+     * Pilihan yang dibutuhkan form One-Click Hired Conversion.
+     *
+     * @return array<string, mixed>
+     */
+    private function conversionOptions(): array
+    {
+        return [
+            'departments' => Department::orderBy('name')->get(['id', 'name'])->all(),
+            'employmentTypes' => EmploymentType::orderBy('id')
+                ->get(['id', 'name', 'code', 'category', 'duration_months'])
+                ->all(),
+            'schemaTypes' => MitraPayrollSchemaController::SCHEMA_TYPES,
+            'taxSchemes' => MitraPayrollSchemaController::TAX_SCHEMES,
+        ];
     }
 
     /**
@@ -204,6 +225,9 @@ class RecruitmentController extends Controller
             'department_id' => ['nullable', 'exists:departments,id'],
             'position' => ['nullable', 'string', 'max:100'],
             'basic_salary' => ['required', 'numeric', 'min:0'],
+            // Entitas mitra tidak punya duration_months, jadi tanggal akhir
+            // kontraknya diisi manual agar tetap masuk peringatan H-30.
+            'contract_end' => ['nullable', 'date', 'after:today'],
             // Mitra schema fields (optional).
             'schema_type' => ['nullable', Rule::in(MitraPayrollSchemaController::SCHEMA_TYPES)],
             'rate_per_unit' => ['nullable', 'numeric', 'min:0'],
@@ -212,10 +236,29 @@ class RecruitmentController extends Controller
             'custom_tax_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
+        // Pelamar yang sudah ditolak tidak boleh langsung dikonversi —
+        // kembalikan dulu ke tahap seleksi agar jejaknya jelas.
+        if ($applicant->stage === 'rejected') {
+            return back()->with(
+                'error',
+                'Pelamar berstatus Rejected. Kembalikan ke tahap seleksi sebelum dikonversi.',
+            );
+        }
+
         $employmentType = EmploymentType::find($data['employment_type_id']);
 
         $mitraSchemaData = null;
-        if ($employmentType?->category === 'mitra' && $data['schema_type']) {
+
+        if ($employmentType?->category === 'mitra') {
+            // Masterplan §2.4: memilih Mitra wajib disertai skema pembayaran custom.
+            // Tanpa skema, mitra akan dilewati diam-diam oleh mesin payroll.
+            if (empty($data['schema_type'])) {
+                return back()->with(
+                    'error',
+                    'Konversi ke Mitra wajib menyertakan skema pembayaran custom.',
+                );
+            }
+
             $mitraSchemaData = [
                 'schema_type' => $data['schema_type'],
                 'rate_per_unit' => $data['rate_per_unit'] ?? 0,
@@ -234,6 +277,25 @@ class RecruitmentController extends Controller
         );
 
         return back()->with('success', "{$applicant->full_name} berhasil dikonversi sebagai {$employmentType->name} (NIK: {$employee->nik}).");
+    }
+
+    /**
+     * Unduh CV pelamar. CV disimpan di disk privat sehingga hanya bisa
+     * diakses lewat route ini — yang sudah dijaga RBAC di routes/web.php.
+     */
+    public function downloadCv(Applicant $applicant): HttpResponse
+    {
+        abort_if(! $applicant->cv_path, 404, 'Pelamar ini tidak melampirkan CV.');
+        abort_if(
+            ! Storage::disk('local')->exists($applicant->cv_path),
+            404,
+            'Berkas CV tidak ditemukan di penyimpanan.',
+        );
+
+        return Storage::disk('local')->download(
+            $applicant->cv_path,
+            'cv-'.Str::slug($applicant->full_name).'.'.pathinfo($applicant->cv_path, PATHINFO_EXTENSION),
+        );
     }
 
     /**
@@ -280,7 +342,21 @@ class RecruitmentController extends Controller
      */
     public function exportApplicants(Request $request, ExportService $exporter): HttpResponse
     {
+        $filters = [
+            'vacancy_id' => $request->integer('vacancy_id') ?: null,
+            'department_id' => $request->integer('department_id') ?: null,
+            'stage' => $request->string('stage')->toString() ?: null,
+        ];
+
+        // Berkas yang diunduh harus sama dengan yang tampil di layar,
+        // jadi filter pipeline ikut diterapkan di sini.
         $rows = Applicant::with('jobVacancy')
+            ->when($filters['vacancy_id'], fn ($q, $id) => $q->where('job_vacancy_id', $id))
+            ->when($filters['department_id'], fn ($q, $id) => $q->whereHas(
+                'jobVacancy',
+                fn ($inner) => $inner->where('department_id', $id),
+            ))
+            ->when($filters['stage'], fn ($q, $stage) => $q->where('stage', $stage))
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (Applicant $a) => [
@@ -301,6 +377,7 @@ class RecruitmentController extends Controller
             title: 'Database Pelamar',
             headings: ['Nama', 'Email', 'Telepon', 'Lowongan', 'Tahap', 'Tanggal Lamar', 'Terakhir Diubah'],
             rows: $rows,
+            filters: $filters,
         );
     }
 

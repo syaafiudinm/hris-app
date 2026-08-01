@@ -78,6 +78,12 @@ const navigation: NavGroup[] = [
                 roles: ["super_admin"],
             },
             {
+                label: "Lowongan",
+                href: "/lowongan",
+                icon: IconFunnel,
+                roles: ["super_admin"],
+            },
+            {
                 label: "Rekrutmen (ATS)",
                 href: "/rekrutmen",
                 icon: IconFunnel,

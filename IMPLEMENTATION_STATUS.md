@@ -6,7 +6,7 @@ Berisi apa yang **sudah jadi**, cara menjalankannya, dan **rencana tahap berikut
 | | |
 | :--- | :--- |
 | **Tanggal** | 1 Agustus 2026 |
-| **Progres roadmap** | Fase 1 ✅ · Fase 2 ✅ · Fase 3 ⬜ |
+| **Progres roadmap** | Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ (ATS) |
 | **Stack terpasang** | Laravel 12 (PHP 8.4) · Inertia 2 · React 19 · TypeScript · Tailwind 4 · MySQL |
 | **Database** | `hris-db` |
 
@@ -167,6 +167,64 @@ tooltip, dan **toggle Tabel** sehingga nilai tidak pernah hanya bisa dibaca lewa
 
 ---
 
+### 2.4 Fase 3 — Recruitment & ATS (Modul 4)
+
+#### Manajemen Lowongan
+
+Halaman `/lowongan` (super admin) untuk membuat, mengubah, dan menghapus lowongan
+— inilah sumber data portal karier. Alur statusnya:
+
+| Status | Arti |
+| :--- | :--- |
+| `draft` | Hanya terlihat internal; aman untuk menyiapkan deskripsi |
+| `open` | Tampil di Portal Karier dan menerima lamaran; `published_at` diisi otomatis saat pertama kali dibuka |
+| `closed` | Hilang dari portal, pelamar yang sudah masuk tetap ada di pipeline |
+
+Lowongan yang sudah punya pelamar **tidak dapat dihapus** — hanya ditutup, supaya
+riwayat rekrutmen tidak ikut hilang.
+
+#### Portal Karier Publik
+
+Route `/karier` di luar middleware `auth`. Menampilkan lowongan `open` dengan label
+kategori (*Full-time PKWT* / *Probation Track* / *Mitra-Freelance*), detail lowongan,
+dan form lamaran + unggah CV (pdf/doc/docx, maks 5 MB). Anti-spam memakai honeypot
+field `website` yang dibalas sukses palsu agar bot tidak belajar.
+
+#### Candidate Pipeline (Kanban)
+
+Halaman `/rekrutmen` mengelompokkan pelamar per tahap
+(`Applied → Screening → Interview → Offering → Hired`), dengan kolom Rejected terpisah.
+Filter per lowongan dan divisi. Setiap perpindahan tahap dicatat ke `stage_history`
+(JSON) lengkap dengan pelaku dan waktunya, plus catatan interview di kolom `notes`.
+
+#### One-Click Hired Conversion
+
+`app/Services/HiredConversionService.php` — satu transaksi DB:
+
+1. Modal memilih entitas (`Probation` / `PKWT 3/6/12` / `Mitra`).
+2. Memilih **Mitra** memunculkan form Skema Pembayaran Custom, dan skema itu
+   **wajib** diisi — tanpanya mitra akan dilewati diam-diam oleh mesin payroll.
+3. Record `employees` dibuat dari data pelamar tanpa input ulang, `contract_end`
+   dihitung dari `duration_months` entitas (atau diisi manual untuk mitra).
+4. `converted_employee_id` diisi dan tahap dikunci ke *Hired*.
+
+NIK dibangkitkan dari nomor NIK tertinggi yang benar-benar ada — bukan dari `id`
+terakhir — sehingga tidak bentrok dengan NIK yang pernah diinput manual oleh HR.
+
+#### Dokumen & Ekspor ATS
+
+Empat template PDF baru: offering letter, kontrak Probation, kontrak PKWT, dan
+kontrak Mitra. Ekspor: Database Pelamar (menghormati filter pipeline), Performa
+Lowongan, dan Conversion Rate — semuanya lewat `ExportService` yang sudah ada.
+
+#### Keamanan berkas CV
+
+CV pelamar berisi data pribadi, jadi disimpan di **disk privat** (`local`), bukan
+`public`. Unduhannya lewat route `/rekrutmen/{applicant}/cv` yang dijaga RBAC
+super admin — bukan URL `/storage/...` yang dapat diakses siapa pun.
+
+---
+
 ## 3. Hasil Verifikasi
 
 Diuji lewat HTTP kernel Laravel, bukan asumsi:
@@ -187,6 +245,26 @@ Geofence      0 m DI DALAM · 400 m di luar · Surabaya di luar
 
 `npx tsc --noEmit` bersih · `npm run build` sukses.
 
+### Test otomatis (Pest)
+
+```
+Tests: 21 passed (65 assertions)
+
+JobVacancyTest         buat lowongan · alur draft/open/closed · proteksi hapus · RBAC
+RecruitmentTest        portal karier · pipeline · konversi hired
+RecruitmentGuardTest   regresi ATS:
+  · form konversi tersedia di papan pipeline DAN halaman detail (opsi identik)
+  · konversi mitra tanpa skema ditolak, bukan error 500
+  · konversi mitra dengan skema menghasilkan skema pembayaran + contract_end
+  · pelamar rejected tidak dapat dikonversi
+  · NIK hasil konversi tidak bentrok dengan NIK input manual
+  · CV di disk privat; hanya super admin dapat mengunduh
+  · tamu diarahkan ke login saat mengakses CV
+  · ekspor pelamar menghormati filter lowongan
+```
+
+Query per halaman setelah perbaikan N+1: `/rekrutmen` 27 → 18, `/karier` 10 → 6.
+
 ---
 
 ## 4. Batasan yang Perlu Diketahui
@@ -197,55 +275,25 @@ Geofence      0 m DI DALAM · 400 m di luar · Surabaya di luar
 | **PPh 21 TER disederhanakan** | Baru memakai bracket TER A umum; belum membedakan TER B/C per status PTKP. Perlu tabel lengkap + field PTKP sebelum produksi. |
 | **Ekspor masih sinkron** | Aman pada volume saat ini, tapi Tips §7.2 menyarankan background job queue untuk ribuan baris. |
 | **Kuantitas mitra unit/milestone manual** | Belum ada UI input kuantitas per periode; sementara dihitung 1× penuh. |
-| **Belum ada tes otomatis** | Verifikasi masih lewat smoke test manual. Pest sudah terpasang tapi belum ada test case. |
+| **Cakupan tes masih parsial** | 21 test menutup modul ATS (lowongan, konversi, CV, ekspor). Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
+| **Kanban belum drag-and-drop** | Perpindahan tahap lewat tombol/select, bukan seret-lepas. Fungsional, tapi belum senyaman papan kanban penuh. |
 | **Belum ada notification engine** | Peringatan kontrak H-30/H-14 baru tampil di dashboard, belum dikirim via email/WhatsApp. |
+| **Lamaran publik belum di-rate-limit** | Honeypot sudah ada, tapi belum ada throttle per IP pada `/karier/{id}/apply`. |
 | **`composer audit`** | 30 advisory, seluruhnya dari dependensi Laravel/Symfony bawaan. Jalankan `composer update`. |
 
 ---
 
 ## 5. Tahap Selanjutnya
 
-### 5.1 Fase 3 — ATS & Analytics (estimasi 3 minggu)
+### 5.1 Penyempurnaan Modul ATS
 
-Sesuai roadmap Masterplan §6. Tabel `job_vacancies` dan `applicants` **sudah ada dan
-terisi data demo**, jadi Fase 3 tinggal membangun modulnya.
+Inti Fase 3 sudah jalan; sisa yang membuatnya matang:
 
-#### A. Portal Karier Publik — ~3 hari
-
-* Route publik (di luar middleware `auth`) menampilkan lowongan berstatus `open`.
-* Label kategori pada tiap lowongan: *Full-time PKWT*, *Probation Track*, *Mitra/Freelance*.
-* Form lamaran + unggah CV ke storage (`applicants.cv_path` sudah tersedia).
-* Perlu ditambah: validasi tipe & ukuran berkas, proteksi spam (honeypot/rate limit).
-
-#### B. Candidate Pipeline (Kanban) — ~5 hari
-
-* Papan kanban: `Applied → Screening → Interview → Offering → Hired`.
-* Drag-and-drop antar kolom; butuh library DnD (`@dnd-kit/core` disarankan — ringan, aksesibel).
-* Filter per lowongan, per divisi, dan rentang tanggal.
-* Detail kandidat: riwayat perpindahan tahap, catatan interview, pratinjau CV.
-
-#### C. One-Click Hired Conversion — ~4 hari
-
-Bagian paling bernilai karena menyambung ATS ke Core HR yang sudah jadi:
-
-1. Saat status diubah ke *Hired*, tampilkan modal pemilihan entitas
-   (`Probation 3 Bulan` / `PKWT 3` / `PKWT 6` / `PKWT 12` / `Mitra`).
-2. Bila memilih **Mitra**, lanjutkan ke form Skema Pembayaran Custom
-   — komponennya bisa dipakai ulang dari `MitraSchemas/Index.tsx`.
-3. Buat record `employees` otomatis dari data pelamar (tanpa input ulang),
-   isi `converted_employee_id`, hitung `contract_end` dari `duration_months`.
-4. Bungkus dalam transaksi DB agar konversi tidak setengah jadi.
-
-#### D. Template Kontrak & Offering Letter — ~3 hari
-
-Sesuai Tips §7.3 — template PDF berbeda untuk Probation, PKWT (3/6/12), dan Mitra.
-Infrastruktur PDF sudah ada (dompdf + pola blade), tinggal menambah template.
-
-#### E. Ekspor & Analytics ATS — ~2 hari
-
-* Ekspor Database Pelamar, Laporan Performa Lowongan, Laporan Conversion Rate.
-* Semua lewat `ExportService` yang sudah ada — cukup siapkan heading + baris.
-* Dashboard ATS: funnel per lowongan, waktu rata-rata per tahap, sumber pelamar.
+* **Kanban drag-and-drop** (~2 hari) — `@dnd-kit/core` disarankan (ringan, aksesibel).
+* **Rate limit lamaran publik** (~1 jam) — `throttle:5,60` pada route apply.
+* **Dashboard ATS lanjutan** (~2 hari) — waktu rata-rata per tahap dan sumber pelamar;
+  funnel dasarnya sudah ada di dashboard utama.
+* **Notifikasi pelamar** (~2 hari) — email otomatis saat tahap berubah.
 
 ---
 
@@ -269,11 +317,9 @@ Bagian Masterplan §2.1 yang tidak masuk daftar Fase 1:
 
 ### 5.4 Pengerasan Sebelum Produksi
 
-Direkomendasikan dikerjakan sebelum atau paralel dengan Fase 3:
-
 | Prioritas | Pekerjaan |
 | :--- | :--- |
-| **Tinggi** | Test otomatis Pest untuk rule engine (cuti, BPJS, RBAC) — logika ini paling mahal bila regresi |
+| **Tinggi** | Test Pest untuk rule engine cuti/BPJS/RBAC — modul ATS sudah tertutup 21 test, rule engine belum |
 | **Tinggi** | Tabel PPh 21 TER lengkap (A/B/C) + field status PTKP pada `employees` |
 | **Tinggi** | `composer update` untuk menutup advisory dependensi |
 | Sedang | Pindahkan ekspor besar ke queue + notifikasi berkas siap unduh |
@@ -292,6 +338,9 @@ app/
 ├── Http/Controllers/
 │   ├── Auth/LoginController.php
 │   ├── AttendanceController.php          # rekap, self-service, clock in/out, 3 ekspor
+│   ├── CareerController.php              # portal karier publik + form lamaran
+│   ├── JobVacancyController.php          # CRUD lowongan + alur publikasi
+│   ├── RecruitmentController.php         # pipeline, konversi, PDF, unduh CV, 3 ekspor
 │   ├── DashboardController.php           # analytics Modul 5
 │   ├── EmployeeController.php            # CRUD + 2 ekspor
 │   ├── EmploymentTypeController.php      # definisi entitas
@@ -302,6 +351,7 @@ app/
 ├── Services/
 │   ├── AttendanceService.php             # geofence + anti-fake GPS
 │   ├── ExportService.php                 # xlsx/csv/pdf + audit log
+│   ├── HiredConversionService.php        # pelamar -> karyawan, satu transaksi
 │   ├── LeavePolicyService.php            # aturan cuti per entitas
 │   ├── PayrollCalculator.php             # BPJS + PPh 21 TER + skema mitra
 │   └── PayrollRunService.php             # eksekusi periode
@@ -310,16 +360,25 @@ app/
 resources/
 ├── js/
 │   ├── Layouts/AppLayout.tsx             # sidebar role-aware
-│   ├── Components/                       # ui.tsx, ExportMenu, StatTile, charts/
+│   ├── Components/                       # ui.tsx, ExportMenu, StatTile,
+│   │                                     # ConversionModal (dipakai 2 halaman), charts/
 │   ├── Pages/                            # Auth, Employees, Attendance, Payroll,
-│   │                                     # Leaves, MitraSchemas, EmploymentTypes
+│   │                                     # Leaves, MitraSchemas, EmploymentTypes,
+│   │                                     # Career (publik), Recruitment, Vacancies
 │   └── lib/format.ts                     # format rupiah & angka id-ID
 └── views/
     ├── documents/payslip.blade.php
     ├── documents/payment-voucher.blade.php
+    ├── documents/offering-letter.blade.php
+    ├── documents/contract-{probation,pkwt,mitra}.blade.php
     └── exports/table.blade.php           # template PDF generik
+
+tests/Feature/
+├── JobVacancyTest.php                    # manajemen lowongan
+├── RecruitmentTest.php                   # alur utama ATS
+└── RecruitmentGuardTest.php              # regresi bug ATS
 ```
 
 ---
 
-*Diperbarui 1 Agustus 2026 — setelah penyelesaian Fase 1 & Fase 2.*
+*Diperbarui 1 Agustus 2026 — setelah penyelesaian Fase 1, Fase 2, dan Fase 3 (ATS).*

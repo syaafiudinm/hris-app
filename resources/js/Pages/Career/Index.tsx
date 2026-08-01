@@ -38,7 +38,9 @@ export default function CareerIndex({ vacancies, filters }: Props) {
         <>
             <Head title="Karier — Lowongan Terbuka" />
 
-            <div className="min-h-screen bg-[#f4f8fd]">
+            {/* Kolom flex agar footer tetap menempel di dasar layar
+                walau daftar lowongan kosong. */}
+            <div className="flex min-h-screen flex-col bg-[#f4f8fd]">
                 {/* Header */}
                 <header className="border-b border-[#e2ecf8] bg-white">
                     <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5 sm:px-8">
@@ -79,7 +81,7 @@ export default function CareerIndex({ vacancies, filters }: Props) {
                 </section>
 
                 {/* Filter & Content */}
-                <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
+                <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 sm:px-8">
                     {/* Category filter */}
                     <div className="mb-6 flex flex-wrap gap-2">
                         {[

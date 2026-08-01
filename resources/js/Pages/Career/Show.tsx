@@ -44,7 +44,8 @@ export default function CareerShow({ vacancy }: Props) {
         <>
             <Head title={`${vacancy.title} — Karier`} />
 
-            <div className="min-h-screen bg-[#f4f8fd]">
+            {/* Kolom flex agar footer tetap menempel di dasar layar. */}
+            <div className="flex min-h-screen flex-col bg-[#f4f8fd]">
                 {/* Header */}
                 <header className="border-b border-[#e2ecf8] bg-white">
                     <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5 sm:px-8">
@@ -73,7 +74,7 @@ export default function CareerShow({ vacancy }: Props) {
                     </div>
                 </header>
 
-                <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
+                <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 sm:px-8">
                     <div className="grid gap-6 lg:grid-cols-5">
                         {/* Detail lowongan */}
                         <div className="lg:col-span-3">

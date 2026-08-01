@@ -6,6 +6,7 @@ use App\Http\Controllers\CareerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmploymentTypeController;
+use App\Http\Controllers\JobVacancyController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MitraPayrollSchemaController;
 use App\Http\Controllers\PayrollController;
@@ -158,6 +159,27 @@ Route::middleware("auth")->group(function () {
          | Rekrutmen (ATS) — Modul 4
          |------------------------------------------------------------------
          */
+        Route::get("/lowongan", [
+            JobVacancyController::class,
+            "index",
+        ])->name("vacancies.index");
+        Route::post("/lowongan", [
+            JobVacancyController::class,
+            "store",
+        ])->name("vacancies.store");
+        Route::patch("/lowongan/{vacancy}", [
+            JobVacancyController::class,
+            "update",
+        ])->name("vacancies.update");
+        Route::patch("/lowongan/{vacancy}/status", [
+            JobVacancyController::class,
+            "toggleStatus",
+        ])->name("vacancies.status");
+        Route::delete("/lowongan/{vacancy}", [
+            JobVacancyController::class,
+            "destroy",
+        ])->name("vacancies.destroy");
+
         Route::get("/rekrutmen", [
             RecruitmentController::class,
             "index",
@@ -178,6 +200,10 @@ Route::middleware("auth")->group(function () {
             RecruitmentController::class,
             "convertToHired",
         ])->name("recruitment.convert");
+        Route::get("/rekrutmen/{applicant}/cv", [
+            RecruitmentController::class,
+            "downloadCv",
+        ])->name("recruitment.cv");
         Route::get("/rekrutmen/{applicant}/offering-letter", [
             RecruitmentController::class,
             "offeringLetter",

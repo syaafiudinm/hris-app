@@ -1,6 +1,10 @@
 import { Head, Link, router, useForm } from "@inertiajs/react";
+import { useState } from "react";
 import AppLayout from "@/Layouts/AppLayout";
 import Card from "@/Components/Card";
+import ConversionModal, {
+    type ConversionOptions,
+} from "@/Components/ConversionModal";
 import { Badge, Button, Field, Textarea } from "@/Components/ui";
 
 type StageHistoryEntry = {
@@ -23,7 +27,7 @@ type ApplicantDetail = {
     phone: string | null;
     stage: string;
     stageLabel: string;
-    cvPath: string | null;
+    hasCv: boolean;
     notes: NoteEntry[];
     stageHistory: StageHistoryEntry[];
     appliedAt: string | null;
@@ -46,6 +50,7 @@ type Props = {
     applicant: ApplicantDetail;
     stages: string[];
     stageLabels: Record<string, string>;
+    options: ConversionOptions;
 };
 
 const STAGE_TONES: Record<string, string> = {
@@ -57,8 +62,14 @@ const STAGE_TONES: Record<string, string> = {
     rejected: "critical",
 };
 
-export default function RecruitmentShow({ applicant, stages, stageLabels }: Props) {
+export default function RecruitmentShow({
+    applicant,
+    stages,
+    stageLabels,
+    options,
+}: Props) {
     const noteForm = useForm({ content: "" });
+    const [converting, setConverting] = useState(false);
 
     function submitNote(event: React.FormEvent) {
         event.preventDefault();
@@ -69,6 +80,14 @@ export default function RecruitmentShow({ applicant, stages, stageLabels }: Prop
     }
 
     function moveStage(newStage: string) {
+        // Menandai Hired harus melalui form konversi — sama seperti papan
+        // pipeline. Tanpa ini kandidat berstatus Hired tanpa pernah menjadi
+        // data karyawan.
+        if (newStage === "hired" && !applicant.convertedEmployee) {
+            setConverting(true);
+            return;
+        }
+
         router.patch(
             `/rekrutmen/${applicant.id}/stage`,
             { stage: newStage },
@@ -104,6 +123,15 @@ export default function RecruitmentShow({ applicant, stages, stageLabels }: Prop
                             📄 Kontrak
                         </a>
                     )}
+                    {/* Jalur konversi yang jelas, tanpa harus kembali ke papan
+                        pipeline. Pelamar rejected ditolak server, jadi tombolnya
+                        tidak ditampilkan di sini. */}
+                    {!applicant.convertedEmployee &&
+                        applicant.stage !== "rejected" && (
+                            <Button onClick={() => setConverting(true)}>
+                                Konversi ke Karyawan
+                            </Button>
+                        )}
                 </div>
             }
         >
@@ -150,9 +178,9 @@ export default function RecruitmentShow({ applicant, stages, stageLabels }: Prop
                             <div>
                                 <dt className="text-xs text-ink-muted">CV</dt>
                                 <dd>
-                                    {applicant.cvPath ? (
+                                    {applicant.hasCv ? (
                                         <a
-                                            href={`/storage/${applicant.cvPath}`}
+                                            href={`/rekrutmen/${applicant.id}/cv`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-sm font-medium text-brand-600 hover:text-brand-700"
@@ -303,9 +331,9 @@ export default function RecruitmentShow({ applicant, stages, stageLabels }: Prop
                                     📄 Download Kontrak (PDF)
                                 </a>
                             )}
-                            {applicant.cvPath && (
+                            {applicant.hasCv && (
                                 <a
-                                    href={`/storage/${applicant.cvPath}`}
+                                    href={`/rekrutmen/${applicant.id}/cv`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="block rounded-lg border border-hairline px-3 py-2 text-xs font-medium text-ink-soft transition hover:bg-surface-soft hover:text-ink"
@@ -313,13 +341,25 @@ export default function RecruitmentShow({ applicant, stages, stageLabels }: Prop
                                     📄 Download CV
                                 </a>
                             )}
-                            {!applicant.cvPath && applicant.stage !== "offering" && !applicant.convertedEmployee && (
+                            {!applicant.hasCv && applicant.stage !== "offering" && !applicant.convertedEmployee && (
                                 <p className="text-xs text-ink-muted">Belum ada dokumen.</p>
                             )}
                         </div>
                     </Card>
                 </div>
             </div>
+
+            {converting && (
+                <ConversionModal
+                    applicant={{
+                        id: applicant.id,
+                        name: applicant.name,
+                        vacancyTitle: applicant.vacancy.title,
+                    }}
+                    options={options}
+                    onClose={() => setConverting(false)}
+                />
+            )}
         </AppLayout>
     );
 }

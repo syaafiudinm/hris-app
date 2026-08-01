@@ -9,6 +9,7 @@ use App\Models\MitraPayrollSchema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
+
 /**
  * One-Click Hired Conversion — mengubah pelamar menjadi karyawan/mitra
  * dalam satu transaksi database.
@@ -38,9 +39,12 @@ class HiredConversionService
 
         return DB::transaction(function () use ($applicant, $conversionData, $employmentType, $mitraSchemaData, $changedBy) {
             $contractStart = now();
+
+            // Durasi entitas jadi acuan utama; bila entitas tidak punya durasi
+            // (mitra), pakai tanggal akhir yang diisi HR pada form konversi.
             $contractEnd = $employmentType->duration_months
                 ? $contractStart->copy()->addMonths($employmentType->duration_months)
-                : null;
+                : ($conversionData['contract_end'] ?? null);
 
             $employee = Employee::create([
                 'employment_type_id' => $employmentType->id,
@@ -73,12 +77,35 @@ class HiredConversionService
     }
 
     /**
-     * Generate NIK unik berdasarkan ID terakhir.
+     * Bangkitkan NIK unik.
+     *
+     * Nomor urut diambil dari NIK tertinggi yang benar-benar ada, bukan dari
+     * id terakhir — sebab HR bisa menginput NIK manual sehingga urutan id dan
+     * urutan NIK tidak selalu sejalan. Loop menjaga agar tetap aman ketika
+     * ada lompatan nomor.
      */
-    private function generateNik(): string
+    private function generateNik(string $prefix = 'EMP'): string
     {
-        $last = Employee::orderByDesc('id')->value('id') ?? 0;
+        // Nomor urut dihitung di PHP agar sama persis di MySQL maupun SQLite
+        // (fungsi SUBSTRING/CAST keduanya berbeda dialek).
+        $highest = Employee::where('nik', 'like', $prefix.'-%')
+            ->pluck('nik')
+            ->map(fn (string $nik) => (int) substr($nik, strlen($prefix) + 1))
+            ->max() ?? 0;
 
-        return sprintf('EMP-%04d', $last + 1);
+        $next = $highest + 1;
+
+        // Batas percobaan mencegah loop tak berujung bila data NIK kacau.
+        for ($attempt = 0; $attempt < 1000; $attempt++) {
+            $candidate = sprintf('%s-%04d', $prefix, $next + $attempt);
+
+            if (! Employee::where('nik', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        throw ValidationException::withMessages([
+            'nik' => 'Tidak dapat membuat NIK unik. Periksa penomoran data karyawan.',
+        ]);
     }
 }
