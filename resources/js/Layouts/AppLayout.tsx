@@ -77,20 +77,21 @@ const navigation: NavGroup[] = [
                 icon: IconWallet,
                 roles: ["super_admin"],
             },
+            {
+                label: "Rekrutmen (ATS)",
+                href: "/rekrutmen",
+                icon: IconFunnel,
+                roles: ["super_admin"],
+            },
         ],
     },
     {
         heading: "Belum tersedia",
         items: [
             {
-                label: "Rekrutmen (ATS)",
-                icon: IconFunnel,
-                hint: "Modul 4 — masuk Fase 3",
-            },
-            {
                 label: "Knowledge Center",
                 icon: IconBook,
-                hint: "Modul 5 — masuk Fase 3",
+                hint: "Modul 5 — masuk fase berikutnya",
             },
         ],
     },

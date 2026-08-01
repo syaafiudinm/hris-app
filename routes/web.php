@@ -2,13 +2,31 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CareerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmploymentTypeController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MitraPayrollSchemaController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\RecruitmentController;
 use Illuminate\Support\Facades\Route;
+
+/*
+ |----------------------------------------------------------------------
+ | Portal Karier — route publik, tanpa auth.
+ |----------------------------------------------------------------------
+ */
+Route::get("/karier", [CareerController::class, "index"])->name(
+    "career.index",
+);
+Route::get("/karier/{vacancy}", [CareerController::class, "show"])->name(
+    "career.show",
+);
+Route::post("/karier/{vacancy}/apply", [
+    CareerController::class,
+    "apply",
+])->name("career.apply");
 
 Route::middleware("guest")->group(function () {
     Route::get("/login", [LoginController::class, "create"])->name("login");
@@ -134,6 +152,40 @@ Route::middleware("auth")->group(function () {
             MitraPayrollSchemaController::class,
             "destroy",
         ])->name("mitra-schemas.destroy");
+
+        /*
+         |------------------------------------------------------------------
+         | Rekrutmen (ATS) — Modul 4
+         |------------------------------------------------------------------
+         */
+        Route::get("/rekrutmen", [
+            RecruitmentController::class,
+            "index",
+        ])->name("recruitment.index");
+        Route::get("/rekrutmen/{applicant}", [
+            RecruitmentController::class,
+            "show",
+        ])->name("recruitment.show");
+        Route::patch("/rekrutmen/{applicant}/stage", [
+            RecruitmentController::class,
+            "updateStage",
+        ])->name("recruitment.update-stage");
+        Route::post("/rekrutmen/{applicant}/note", [
+            RecruitmentController::class,
+            "addNote",
+        ])->name("recruitment.add-note");
+        Route::post("/rekrutmen/{applicant}/convert", [
+            RecruitmentController::class,
+            "convertToHired",
+        ])->name("recruitment.convert");
+        Route::get("/rekrutmen/{applicant}/offering-letter", [
+            RecruitmentController::class,
+            "offeringLetter",
+        ])->name("recruitment.offering-letter");
+        Route::get("/rekrutmen/employee/{employee}/contract", [
+            RecruitmentController::class,
+            "contract",
+        ])->name("recruitment.contract");
     });
 
     /*
@@ -184,6 +236,21 @@ Route::middleware("auth")->group(function () {
                     PayrollController::class,
                     "exportTax",
                 ])->name("payroll-tax");
+
+                // Ekspor ATS
+                Route::get("/pelamar", [
+                    RecruitmentController::class,
+                    "exportApplicants",
+                ])->name("applicants");
+                Route::get("/lowongan-performa", [
+                    RecruitmentController::class,
+                    "exportVacancyPerformance",
+                ])->name("vacancy-performance");
+                Route::get("/conversion-rate", [
+                    RecruitmentController::class,
+                    "exportConversionRate",
+                ])->name("conversion-rate");
             });
         });
 });
+

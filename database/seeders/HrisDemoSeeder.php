@@ -410,12 +410,54 @@ class HrisDemoSeeder extends Seeder
     private function seedRecruitment(): void
     {
         $vacancies = [
-            ['title' => 'Senior Backend Engineer', 'offered_category' => 'pkwt', 'dept' => 'TECH', 'quota' => 2],
-            ['title' => 'UI/UX Designer (Freelance)', 'offered_category' => 'mitra', 'dept' => 'TECH', 'quota' => 1],
-            ['title' => 'Finance Staff', 'offered_category' => 'probation', 'dept' => 'FIN', 'quota' => 1],
-            ['title' => 'Digital Marketing Specialist', 'offered_category' => 'pkwt', 'dept' => 'MKT', 'quota' => 3],
-            ['title' => 'Content Writer (Per Artikel)', 'offered_category' => 'mitra', 'dept' => 'MKT', 'quota' => 4],
-            ['title' => 'Warehouse Supervisor', 'offered_category' => 'probation', 'dept' => 'OPS', 'quota' => 1],
+            [
+                'title' => 'Senior Backend Engineer',
+                'offered_category' => 'pkwt',
+                'dept' => 'TECH',
+                'quota' => 2,
+                'description' => "Kami mencari Senior Backend Engineer yang berpengalaman dalam membangun dan mengelola arsitektur sistem backend skala besar.\n\nAnda akan bertanggung jawab atas pengembangan API, optimasi performa, dan kolaborasi lintas tim untuk menghasilkan produk berkualitas tinggi.",
+                'requirements' => "- Minimal 3 tahun pengalaman di bidang backend development\n- Menguasai PHP (Laravel) atau Go\n- Familiar dengan database relasional (MySQL/PostgreSQL)\n- Pengalaman dengan Docker dan CI/CD\n- Kemampuan komunikasi yang baik",
+            ],
+            [
+                'title' => 'UI/UX Designer (Freelance)',
+                'offered_category' => 'mitra',
+                'dept' => 'TECH',
+                'quota' => 1,
+                'description' => "Posisi freelance untuk UI/UX Designer yang akan bekerja pada proyek-proyek desain interface internal dan eksternal.",
+                'requirements' => "- Portofolio desain UI/UX yang kuat\n- Menguasai Figma\n- Memahami prinsip usability dan accessibility\n- Dapat bekerja secara remote",
+            ],
+            [
+                'title' => 'Finance Staff',
+                'offered_category' => 'probation',
+                'dept' => 'FIN',
+                'quota' => 1,
+                'description' => "Bergabunglah dengan tim keuangan kami sebagai Finance Staff untuk menangani pembukuan, laporan keuangan, dan administrasi pajak.",
+                'requirements' => "- S1 Akuntansi atau Keuangan\n- Memahami standar PSAK\n- Teliti dan detail-oriented\n- Fresh graduate dipersilakan melamar",
+            ],
+            [
+                'title' => 'Digital Marketing Specialist',
+                'offered_category' => 'pkwt',
+                'dept' => 'MKT',
+                'quota' => 3,
+                'description' => "Kami membutuhkan Digital Marketing Specialist yang kreatif dan data-driven untuk mengelola kampanye digital perusahaan.",
+                'requirements' => "- Minimal 2 tahun pengalaman di digital marketing\n- Menguasai Google Ads, Meta Ads, dan SEO\n- Familiar dengan tools analytics\n- Kemampuan copywriting yang baik",
+            ],
+            [
+                'title' => 'Content Writer (Per Artikel)',
+                'offered_category' => 'mitra',
+                'dept' => 'MKT',
+                'quota' => 4,
+                'description' => "Mitra content writer untuk menghasilkan artikel berkualitas tinggi. Pembayaran per artikel yang dipublikasikan.",
+                'requirements' => "- Pengalaman menulis artikel web/blog\n- Paham SEO on-page\n- Bisa menulis dalam Bahasa Indonesia dan Inggris\n- Disiplin terhadap deadline",
+            ],
+            [
+                'title' => 'Warehouse Supervisor',
+                'offered_category' => 'probation',
+                'dept' => 'OPS',
+                'quota' => 1,
+                'description' => "Memimpin operasional gudang harian, memastikan akurasi inventaris, dan mengoordinasikan tim warehouse.",
+                'requirements' => "- Minimal 2 tahun pengalaman di bidang logistik/warehouse\n- Memahami WMS (Warehouse Management System)\n- Kemampuan leadership yang baik\n- Bersedia kerja shift",
+            ],
         ];
 
         $firstNames = ['Adit', 'Bella', 'Cahya', 'Dimas', 'Erlangga', 'Fitri', 'Galuh', 'Hana', 'Irfan', 'Jasmine'];
@@ -423,11 +465,21 @@ class HrisDemoSeeder extends Seeder
 
         $stages = ['applied', 'applied', 'applied', 'screening', 'screening', 'interview', 'interview', 'offering', 'hired', 'rejected'];
 
+        $sampleNotes = [
+            'Kandidat menunjukkan pemahaman teknis yang kuat.',
+            'Komunikasi baik, perlu evaluasi lebih lanjut pada skill teknis.',
+            'Cocok dengan budaya tim, direkomendasikan untuk tahap selanjutnya.',
+            'Perlu negosiasi ulang terkait ekspektasi gaji.',
+            'Portofolio sangat mengesankan.',
+        ];
+
         foreach ($vacancies as $index => $definition) {
             $vacancy = JobVacancy::create([
                 'department_id' => $this->departments[$definition['dept']]->id,
                 'title' => $definition['title'],
                 'offered_category' => $definition['offered_category'],
+                'description' => $definition['description'],
+                'requirements' => $definition['requirements'],
                 'location' => $this->departments[$definition['dept']]->location,
                 'quota' => $definition['quota'],
                 'status' => 'open',
@@ -436,15 +488,56 @@ class HrisDemoSeeder extends Seeder
 
             foreach (range(1, mt_rand(6, 18)) as $n) {
                 $name = $firstNames[array_rand($firstNames)].' '.$lastNames[array_rand($lastNames)];
+                $stage = $stages[array_rand($stages)];
+
+                // Build stage history for non-applied stages.
+                $stageHistory = [];
+                $orderedStages = ['applied', 'screening', 'interview', 'offering', 'hired'];
+                $stageIndex = array_search($stage, $orderedStages);
+                if ($stageIndex === false && $stage === 'rejected') {
+                    $rejectFrom = $orderedStages[mt_rand(0, 2)];
+                    $stageHistory[] = [
+                        'from' => $rejectFrom,
+                        'to' => 'rejected',
+                        'changed_by' => 'Syaafiudin M',
+                        'changed_at' => now()->subDays(mt_rand(1, 20))->toIso8601String(),
+                    ];
+                } elseif ($stageIndex !== false && $stageIndex > 0) {
+                    for ($i = 0; $i < $stageIndex; $i++) {
+                        $stageHistory[] = [
+                            'from' => $orderedStages[$i],
+                            'to' => $orderedStages[$i + 1],
+                            'changed_by' => 'Syaafiudin M',
+                            'changed_at' => now()->subDays(mt_rand(1, 30 - $i * 5))->toIso8601String(),
+                        ];
+                    }
+                }
+
+                // Some candidates get notes.
+                $notes = [];
+                if (in_array($stage, ['interview', 'offering', 'hired']) && mt_rand(0, 1)) {
+                    $noteCount = mt_rand(1, 2);
+                    for ($j = 0; $j < $noteCount; $j++) {
+                        $notes[] = [
+                            'content' => $sampleNotes[array_rand($sampleNotes)],
+                            'author' => 'Syaafiudin M',
+                            'created_at' => now()->subDays(mt_rand(1, 15))->toIso8601String(),
+                        ];
+                    }
+                }
 
                 Applicant::create([
                     'job_vacancy_id' => $vacancy->id,
                     'full_name' => $name,
                     'email' => Str::slug($name, '.').$index.$n.'@mail.com',
                     'phone' => '08'.mt_rand(1000000000, 9999999999),
-                    'stage' => $stages[array_rand($stages)],
+                    'stage' => $stage,
+                    'notes' => $notes ?: null,
+                    'stage_history' => $stageHistory ?: null,
+                    'stage_changed_at' => count($stageHistory) > 0 ? now()->subDays(mt_rand(1, 10)) : null,
                 ]);
             }
         }
     }
 }
+

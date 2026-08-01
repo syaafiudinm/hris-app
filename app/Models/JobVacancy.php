@@ -12,6 +12,8 @@ class JobVacancy extends Model
         'department_id',
         'title',
         'offered_category',
+        'description',
+        'requirements',
         'location',
         'quota',
         'status',
