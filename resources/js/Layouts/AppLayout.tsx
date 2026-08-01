@@ -36,6 +36,11 @@ const navigation: NavGroup[] = [
             { label: "Absensi Saya", href: "/absensi-saya", icon: IconClock },
             { label: "Cuti & Izin Saya", href: "/cuti-saya", icon: IconBook },
             { label: "Slip Gaji Saya", href: "/slip-gaji-saya", icon: IconWallet },
+            {
+                label: "Knowledge Center",
+                href: "/knowledge",
+                icon: IconBook,
+            },
         ],
     },
     {
@@ -89,15 +94,11 @@ const navigation: NavGroup[] = [
                 icon: IconFunnel,
                 roles: ["super_admin"],
             },
-        ],
-    },
-    {
-        heading: "Belum tersedia",
-        items: [
             {
-                label: "Knowledge Center",
+                label: "Kelola Knowledge",
+                href: "/knowledge/kelola",
                 icon: IconBook,
-                hint: "Modul 5 — masuk fase berikutnya",
+                roles: ["super_admin"],
             },
         ],
     },
@@ -131,8 +132,19 @@ export default function AppLayout({
         }))
         .filter((group) => group.items.length > 0);
 
+    // Menu yang paling spesifik yang menang, supaya membuka
+    // /knowledge/kelola tidak ikut menyorot /knowledge.
+    const activeHref = visibleGroups
+        .flatMap((group) => group.items)
+        .map((item) => item.href)
+        .filter((href): href is string => Boolean(href))
+        .filter(
+            (href) => currentUrl === href || currentUrl.startsWith(`${href}/`),
+        )
+        .sort((a, b) => b.length - a.length)[0];
+
     function isActive(href: string): boolean {
-        return currentUrl === href || currentUrl.startsWith(`${href}/`);
+        return href === activeHref;
     }
 
     return (

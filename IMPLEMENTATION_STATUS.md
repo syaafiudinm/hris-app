@@ -6,7 +6,7 @@ Berisi apa yang **sudah jadi**, cara menjalankannya, dan **rencana tahap berikut
 | | |
 | :--- | :--- |
 | **Tanggal** | 1 Agustus 2026 |
-| **Progres roadmap** | Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ (ATS) |
+| **Progres roadmap** | Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ (ATS + Knowledge Center) |
 | **Stack terpasang** | Laravel 12 (PHP 8.4) · Inertia 2 · React 19 · TypeScript · Tailwind 4 · MySQL |
 | **Database** | `hris-db` |
 
@@ -48,7 +48,7 @@ dan 2 lokasi kantor untuk geofence.
 
 #### Core Workforce Database
 
-Sebelas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada `users`:
+Tiga belas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada `users`:
 
 | Tabel | Peran |
 | :--- | :--- |
@@ -62,6 +62,7 @@ Sebelas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada `us
 | `job_vacancies`, `applicants` | Data ATS (dipakai dashboard, modulnya Fase 3) |
 | `office_locations` | Titik geofence + radius |
 | `export_logs` | Audit log ekspor (Masterplan §3) |
+| `announcements`, `knowledge_documents` | Knowledge Center + penargetan audiens |
 | `users.role` | Sumber kebenaran RBAC |
 
 #### RBAC
@@ -225,6 +226,51 @@ super admin — bukan URL `/storage/...` yang dapat diakses siapa pun.
 
 ---
 
+### 2.5 Knowledge Center (Modul 5)
+
+#### Bulletin Pengumuman
+
+Halaman `/knowledge` terbuka untuk semua peran. Pengumuman punya kategori
+(Informasi / Kebijakan / Penting), penanda **sematkan**, dan status draft vs terbit —
+draft tidak pernah terkirim ke pembaca.
+
+#### Storage SOP & Peraturan
+
+Repositori dokumen dengan jenis SOP, Peraturan Perusahaan, Panduan, dan Formulir,
+lengkap dengan versi, ukuran berkas, dan penghitung unduhan. Berkas disimpan di
+**disk privat**; unduhan lewat route ber-RBAC, bukan URL `/storage` publik.
+
+#### Penargetan audiens
+
+Trait `App\Models\Concerns\TargetsAudience` dipakai bersama kedua tabel:
+
+| Target | Yang melihat |
+| :--- | :--- |
+| `all` | Seluruh perusahaan |
+| `department` | Anggota satu divisi |
+| `employment_category` | Satu kategori entitas (Probation / PKWT / Mitra) |
+
+Penyaringan terjadi di level query lewat scope `visibleTo()`, dan **diperiksa ulang
+saat unduh** — bukan sekadar disembunyikan dari daftar.
+
+---
+
+### 2.6 Perubahan Kebijakan Cuti
+
+Sejak 2 Agustus 2026, **ketiga entitas kerja berhak cuti tahunan**:
+
+| Entitas | Kuota | BPJS |
+| :--- | :--- | :--- |
+| Probation 3 Bulan | 3 hari | tetap dikecualikan |
+| PKWT 3 / 6 / 12 Bulan | 3 / 6 / 12 hari | terdaftar |
+| Mitra / Freelance | 12 hari | tetap dikecualikan |
+
+Perubahan ini murni **data**, bukan kode — cukup mengubah `is_leave_eligible` dan
+`annual_leave_quota` pada `employment_types`, karena rule engine memang membaca dari
+sana. Aturan BPJS sengaja tidak ikut diubah dan tetap mengikuti Masterplan §1.2.
+
+---
+
 ## 3. Hasil Verifikasi
 
 Diuji lewat HTTP kernel Laravel, bukan asumsi:
@@ -248,9 +294,10 @@ Geofence      0 m DI DALAM · 400 m di luar · Surabaya di luar
 ### Test otomatis (Pest)
 
 ```
-Tests: 21 passed (65 assertions)
+Tests: 33 passed (100 assertions)
 
 JobVacancyTest         buat lowongan · alur draft/open/closed · proteksi hapus · RBAC
+KnowledgeCenterTest    penargetan audiens · disk privat · RBAC · kebijakan cuti baru
 RecruitmentTest        portal karier · pipeline · konversi hired
 RecruitmentGuardTest   regresi ATS:
   · form konversi tersedia di papan pipeline DAN halaman detail (opsi identik)
@@ -275,7 +322,7 @@ Query per halaman setelah perbaikan N+1: `/rekrutmen` 27 → 18, `/karier` 10 �
 | **PPh 21 TER disederhanakan** | Baru memakai bracket TER A umum; belum membedakan TER B/C per status PTKP. Perlu tabel lengkap + field PTKP sebelum produksi. |
 | **Ekspor masih sinkron** | Aman pada volume saat ini, tapi Tips §7.2 menyarankan background job queue untuk ribuan baris. |
 | **Kuantitas mitra unit/milestone manual** | Belum ada UI input kuantitas per periode; sementara dihitung 1× penuh. |
-| **Cakupan tes masih parsial** | 21 test menutup modul ATS (lowongan, konversi, CV, ekspor). Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
+| **Cakupan tes masih parsial** | 33 test menutup ATS dan Knowledge Center. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
 | **Kanban belum drag-and-drop** | Perpindahan tahap lewat tombol/select, bukan seret-lepas. Fungsional, tapi belum senyaman papan kanban penuh. |
 | **Belum ada notification engine** | Peringatan kontrak H-30/H-14 baru tampil di dashboard, belum dikirim via email/WhatsApp. |
 | **Lamaran publik belum di-rate-limit** | Honeypot sudah ada, tapi belum ada throttle per IP pada `/karier/{id}/apply`. |
@@ -308,18 +355,11 @@ Bagian Masterplan §2.1 yang tidak masuk daftar Fase 1:
 
 ---
 
-### 5.3 Modul 5 — Knowledge Center
-
-* **Bulletin Pengumuman** (~2 hari) — pengumuman internal dengan target per divisi/entitas.
-* **Storage SOP & Peraturan** (~3 hari) — repositori dokumen dengan kontrol akses per role.
-
----
-
 ### 5.4 Pengerasan Sebelum Produksi
 
 | Prioritas | Pekerjaan |
 | :--- | :--- |
-| **Tinggi** | Test Pest untuk rule engine cuti/BPJS/RBAC — modul ATS sudah tertutup 21 test, rule engine belum |
+| **Tinggi** | Test Pest untuk mesin payroll (BPJS, PPh 21 TER, lembur) — bagian ini masih diverifikasi manual |
 | **Tinggi** | Tabel PPh 21 TER lengkap (A/B/C) + field status PTKP pada `employees` |
 | **Tinggi** | `composer update` untuk menutup advisory dependensi |
 | Sedang | Pindahkan ekspor besar ke queue + notifikasi berkas siap unduh |
@@ -340,6 +380,7 @@ app/
 │   ├── AttendanceController.php          # rekap, self-service, clock in/out, 3 ekspor
 │   ├── CareerController.php              # portal karier publik + form lamaran
 │   ├── JobVacancyController.php          # CRUD lowongan + alur publikasi
+│   ├── KnowledgeController.php           # pengumuman + dokumen + unduh privat
 │   ├── RecruitmentController.php         # pipeline, konversi, PDF, unduh CV, 3 ekspor
 │   ├── DashboardController.php           # analytics Modul 5
 │   ├── EmployeeController.php            # CRUD + 2 ekspor
@@ -364,7 +405,8 @@ resources/
 │   │                                     # ConversionModal (dipakai 2 halaman), charts/
 │   ├── Pages/                            # Auth, Employees, Attendance, Payroll,
 │   │                                     # Leaves, MitraSchemas, EmploymentTypes,
-│   │                                     # Career (publik), Recruitment, Vacancies
+│   │                                     # Career (publik), Recruitment, Vacancies,
+│   │                                     # Knowledge (baca + kelola)
 │   └── lib/format.ts                     # format rupiah & angka id-ID
 └── views/
     ├── documents/payslip.blade.php
@@ -375,10 +417,11 @@ resources/
 
 tests/Feature/
 ├── JobVacancyTest.php                    # manajemen lowongan
+├── KnowledgeCenterTest.php               # audiens, disk privat, kebijakan cuti
 ├── RecruitmentTest.php                   # alur utama ATS
 └── RecruitmentGuardTest.php              # regresi bug ATS
 ```
 
 ---
 
-*Diperbarui 1 Agustus 2026 — setelah penyelesaian Fase 1, Fase 2, dan Fase 3 (ATS).*
+*Diperbarui 2 Agustus 2026 — Modul 1–5 aktif; menyisakan aset/clearance dan exit/paklaring.*

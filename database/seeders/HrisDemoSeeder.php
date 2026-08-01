@@ -2,8 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Announcement;
 use App\Models\Applicant;
 use App\Models\Attendance;
+use App\Models\KnowledgeDocument;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmploymentType;
@@ -18,6 +20,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class HrisDemoSeeder extends Seeder
@@ -47,16 +50,119 @@ class HrisDemoSeeder extends Seeder
         $this->seedAttendances($employees);
         $this->seedLeaveRequests($employees);
         $this->seedRecruitment();
+        $this->seedKnowledgeCenter();
+    }
+
+    /**
+     * Bulletin pengumuman & repositori dokumen (Modul 5).
+     */
+    private function seedKnowledgeCenter(): void
+    {
+        $hr = Employee::where('email', 'hr@perusahaan.co.id')->first();
+        $today = CarbonImmutable::now();
+
+        $announcements = [
+            [
+                'title' => 'Penyesuaian Kebijakan Cuti Tahunan',
+                'body' => "Mulai periode ini seluruh entitas kerja — Probation, PKWT, dan Mitra — memperoleh kuota cuti tahunan.\n\nKuota bersifat proporsional terhadap durasi kontrak dan dapat dilihat pada halaman Cuti & Izin Saya. Pengajuan tetap melalui persetujuan atasan masing-masing.",
+                'category' => 'policy',
+                'target_type' => 'all',
+                'is_pinned' => true,
+                'published_at' => $today->subDays(1),
+            ],
+            [
+                'title' => 'Jadwal Penggajian Bulan Ini',
+                'body' => "Proses payroll ditutup setiap tanggal 25. Pastikan seluruh timesheet dan pengajuan lembur sudah masuk sebelum tanggal tersebut.\n\nSlip gaji dapat diunduh melalui menu Slip Gaji Saya.",
+                'category' => 'info',
+                'target_type' => 'all',
+                'is_pinned' => false,
+                'published_at' => $today->subDays(4),
+            ],
+            [
+                'title' => 'Wajib Clock-in Melalui Aplikasi',
+                'body' => 'Absensi manual sudah tidak diterima. Gunakan menu Absensi Saya dengan GPS aktif dan foto selfie. Absensi di luar radius kantor akan ditolak sistem.',
+                'category' => 'urgent',
+                'target_type' => 'all',
+                'is_pinned' => false,
+                'published_at' => $today->subDays(9),
+            ],
+            [
+                'title' => 'Standar Pelaporan Timesheet Mitra',
+                'body' => 'Rekan Mitra dengan skema per jam atau per hari wajib melengkapi clock-in dan clock-out. Timesheet inilah yang menjadi dasar perhitungan pembayaran setiap periode.',
+                'category' => 'info',
+                'target_type' => 'employment_category',
+                'target_category' => 'mitra',
+                'is_pinned' => false,
+                'published_at' => $today->subDays(6),
+            ],
+            [
+                'title' => 'Sprint Review Divisi Teknologi',
+                'body' => 'Sprint review diadakan setiap Jumat pukul 15.00 di ruang rapat lantai 3. Kehadiran seluruh anggota tim diharapkan.',
+                'category' => 'info',
+                'target_type' => 'department',
+                'target_department_id' => $this->departments['TECH']->id,
+                'is_pinned' => false,
+                'published_at' => $today->subDays(2),
+            ],
+            [
+                'title' => 'Draf Kebijakan Kerja Hibrida',
+                'body' => 'Dokumen masih dalam pembahasan manajemen dan belum berlaku. Akan diumumkan setelah disahkan.',
+                'category' => 'policy',
+                'target_type' => 'all',
+                'is_pinned' => false,
+                'published_at' => null,
+            ],
+        ];
+
+        foreach ($announcements as $announcement) {
+            Announcement::create($announcement + ['created_by' => $hr?->id]);
+        }
+
+        // Berkas contoh ditulis ke disk privat agar tombol unduh benar-benar
+        // berfungsi saat demo.
+        $documents = [
+            ['title' => 'SOP Pengajuan Cuti & Izin', 'doc_type' => 'sop', 'target_type' => 'all', 'description' => 'Alur pengajuan, batas waktu, dan tingkat persetujuan.'],
+            ['title' => 'Peraturan Perusahaan 2026', 'doc_type' => 'peraturan', 'target_type' => 'all', 'description' => 'Peraturan induk ketenagakerjaan yang berlaku di perusahaan.'],
+            ['title' => 'Panduan Absensi GPS', 'doc_type' => 'panduan', 'target_type' => 'all', 'description' => 'Langkah clock-in, radius kantor, dan penanganan kendala.'],
+            ['title' => 'Formulir Klaim Reimbursement', 'doc_type' => 'formulir', 'target_type' => 'all', 'description' => 'Diisi dan dilampirkan bersama bukti pembayaran.'],
+            ['title' => 'SOP Onboarding Karyawan Baru', 'doc_type' => 'sop', 'target_type' => 'department', 'target_department_id' => $this->departments['HRD']->id, 'description' => 'Checklist internal tim Human Capital.'],
+            ['title' => 'Panduan Kemitraan & Invoice', 'doc_type' => 'panduan', 'target_type' => 'employment_category', 'target_category' => 'mitra', 'description' => 'Ketentuan penagihan dan pajak untuk mitra.'],
+        ];
+
+        foreach ($documents as $index => $document) {
+            $fileName = Str::slug($document['title']).'.pdf';
+            $path = 'knowledge-documents/'.Str::uuid().'.pdf';
+
+            // Konten PDF minimal yang valid supaya berkas dapat dibuka.
+            $content = "%PDF-1.4\n% Dokumen contoh: {$document['title']}\n%%EOF\n";
+            Storage::disk('local')->put($path, $content);
+
+            KnowledgeDocument::create($document + [
+                'file_path' => $path,
+                'original_name' => $fileName,
+                'file_size' => strlen($content),
+                'mime_type' => 'application/pdf',
+                'version' => '1.'.$index,
+                'download_count' => mt_rand(0, 45),
+                'uploaded_by' => $hr?->id,
+            ]);
+        }
     }
 
     private function seedEmploymentTypes(): void
     {
+        // Kebijakan perusahaan: ketiga entitas berhak cuti tahunan.
+        // Kuota tetap proporsional terhadap durasi kontrak, dan seluruhnya
+        // dapat diubah HR lewat halaman Entitas Kerja.
+        //
+        // Catatan: aturan BPJS tidak ikut berubah — Probation dan Mitra tetap
+        // dikecualikan sesuai Masterplan §1.2.
         $definitions = [
-            ['code' => 'PROB3', 'name' => 'Probation 3 Bulan', 'category' => 'probation', 'duration_months' => 3, 'is_leave_eligible' => false, 'is_bpjs_eligible' => false, 'annual_leave_quota' => 0],
+            ['code' => 'PROB3', 'name' => 'Probation 3 Bulan', 'category' => 'probation', 'duration_months' => 3, 'is_leave_eligible' => true, 'is_bpjs_eligible' => false, 'annual_leave_quota' => 3],
             ['code' => 'PKWT3', 'name' => 'PKWT 3 Bulan', 'category' => 'pkwt', 'duration_months' => 3, 'is_leave_eligible' => true, 'is_bpjs_eligible' => true, 'annual_leave_quota' => 3],
             ['code' => 'PKWT6', 'name' => 'PKWT 6 Bulan', 'category' => 'pkwt', 'duration_months' => 6, 'is_leave_eligible' => true, 'is_bpjs_eligible' => true, 'annual_leave_quota' => 6],
             ['code' => 'PKWT12', 'name' => 'PKWT 12 Bulan', 'category' => 'pkwt', 'duration_months' => 12, 'is_leave_eligible' => true, 'is_bpjs_eligible' => true, 'annual_leave_quota' => 12],
-            ['code' => 'MITRA', 'name' => 'Mitra / Freelance', 'category' => 'mitra', 'duration_months' => null, 'is_leave_eligible' => false, 'is_bpjs_eligible' => false, 'annual_leave_quota' => 0],
+            ['code' => 'MITRA', 'name' => 'Mitra / Freelance', 'category' => 'mitra', 'duration_months' => null, 'is_leave_eligible' => true, 'is_bpjs_eligible' => false, 'annual_leave_quota' => 12],
         ];
 
         foreach ($definitions as $definition) {

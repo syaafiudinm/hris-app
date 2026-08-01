@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmploymentTypeController;
 use App\Http\Controllers\JobVacancyController;
+use App\Http\Controllers\KnowledgeController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MitraPayrollSchemaController;
 use App\Http\Controllers\PayrollController;
@@ -76,6 +77,15 @@ Route::middleware("auth")->group(function () {
     Route::get("/slip-gaji-saya", [PayrollController::class, "mine"])->name(
         "payroll.mine",
     );
+
+    // Knowledge Center — dapat dibaca semua role, isinya disaring per audiens.
+    Route::get("/knowledge", [KnowledgeController::class, "index"])->name(
+        "knowledge.index",
+    );
+    Route::get("/knowledge/dokumen/{document}", [
+        KnowledgeController::class,
+        "downloadDocument",
+    ])->name("knowledge.document.download");
     Route::get("/slip-gaji/{payroll}/dokumen", [
         PayrollController::class,
         "document",
@@ -159,6 +169,40 @@ Route::middleware("auth")->group(function () {
          | Rekrutmen (ATS) — Modul 4
          |------------------------------------------------------------------
          */
+        /*
+         |------------------------------------------------------------------
+         | Knowledge Center — pengelolaan konten (Modul 5)
+         |------------------------------------------------------------------
+         */
+        Route::get("/knowledge/kelola", [
+            KnowledgeController::class,
+            "manage",
+        ])->name("knowledge.manage");
+        Route::post("/knowledge/pengumuman", [
+            KnowledgeController::class,
+            "storeAnnouncement",
+        ])->name("knowledge.announcement.store");
+        Route::patch("/knowledge/pengumuman/{announcement}", [
+            KnowledgeController::class,
+            "updateAnnouncement",
+        ])->name("knowledge.announcement.update");
+        Route::patch("/knowledge/pengumuman/{announcement}/status", [
+            KnowledgeController::class,
+            "toggleAnnouncement",
+        ])->name("knowledge.announcement.status");
+        Route::delete("/knowledge/pengumuman/{announcement}", [
+            KnowledgeController::class,
+            "destroyAnnouncement",
+        ])->name("knowledge.announcement.destroy");
+        Route::post("/knowledge/dokumen", [
+            KnowledgeController::class,
+            "storeDocument",
+        ])->name("knowledge.document.store");
+        Route::delete("/knowledge/dokumen/{document}", [
+            KnowledgeController::class,
+            "destroyDocument",
+        ])->name("knowledge.document.destroy");
+
         Route::get("/lowongan", [
             JobVacancyController::class,
             "index",

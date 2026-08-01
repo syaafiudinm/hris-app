@@ -55,9 +55,13 @@ class LeavePolicyService
             return null;
         }
 
-        return $employee->isMitra()
-            ? 'Sebagai Mitra, Anda tidak terikat kuota cuti tahunan. Ketidakhadiran dicatat lewat timesheet.'
-            : 'Selama masa percobaan, cuti tahunan belum aktif. Anda masih dapat mengajukan izin sakit atau izin tanpa gaji.';
+        $entity = $employee->employmentType?->name ?? 'entitas kerja Anda';
+
+        // Hak cuti adalah konfigurasi per entitas (halaman Entitas Kerja),
+        // bukan sifat bawaan kategori — pesannya dibuat netral agar tetap
+        // benar apa pun kebijakan yang sedang berlaku.
+        return "Kuota cuti tahunan untuk entitas {$entity} sedang tidak aktif. "
+            .'Anda tetap dapat mengajukan izin sakit atau izin tanpa gaji.';
     }
 
     /**

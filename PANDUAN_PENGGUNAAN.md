@@ -24,13 +24,19 @@ Sistem ini mengelola tiga jenis tenaga kerja, dan **hak tiap jenis berbeda**:
 
 | Entitas | Cuti tahunan | BPJS | Cara dibayar |
 | :--- | :--- | :--- | :--- |
-| **Probation** (3 bulan) | Tidak ada | Belum didaftarkan | Gaji pokok + tunjangan + lembur |
-| **PKWT** (3/6/12 bulan) | Ada, sesuai kuota | Didaftarkan | Gaji pokok + tunjangan + lembur |
-| **Mitra / Freelance** | Tidak ada | Tidak ikut | Skema custom (per jam/hari/proyek/unit) |
+| **Probation** (3 bulan) | 3 hari | Belum didaftarkan | Gaji pokok + tunjangan + lembur |
+| **PKWT** (3/6/12 bulan) | 3 / 6 / 12 hari | Didaftarkan | Gaji pokok + tunjangan + lembur |
+| **Mitra / Freelance** | 12 hari | Tidak ikut | Skema custom (per jam/hari/proyek/unit) |
+
+Sejak kebijakan terbaru, **ketiga entitas berhak cuti tahunan** dengan kuota
+proporsional terhadap durasi kontrak. Aturan BPJS tidak ikut berubah: Probation dan
+Mitra tetap dikecualikan.
 
 Perbedaan ini **ditegakkan otomatis oleh sistem**, bukan bergantung pada ketelitian
-petugas. Contoh: karyawan probation yang mencoba mengajukan cuti tahunan akan ditolak
-sistem, dan slip gajinya tidak akan pernah memotong BPJS.
+petugas. Slip gaji karyawan probation, misalnya, tidak akan pernah memotong BPJS.
+
+> Kuota dan hak di atas adalah konfigurasi, bukan aturan mati. HR dapat mengubahnya
+> kapan saja lewat menu **Entitas Kerja** — lihat bagian 5.2.
 
 ### Tiga peran pengguna
 
@@ -92,8 +98,9 @@ beserta jumlah menit keterlambatannya.
 Menu **Portal Saya → Cuti & Izin Saya**.
 
 Di kanan layar ada kartu **Saldo cuti tahunan** yang menampilkan sisa hari Anda.
-Jika entitas Anda tidak berhak cuti tahunan (Probation atau Mitra), kartu ini
-menjelaskan alasannya.
+Seluruh entitas — Probation, PKWT, maupun Mitra — memiliki kuota. Bila suatu saat HR
+menonaktifkan hak cuti untuk entitas tertentu, kartu ini menjelaskan alasannya dan
+Anda tetap dapat mengajukan izin sakit atau izin tanpa gaji.
 
 Cara mengajukan:
 
@@ -111,6 +118,21 @@ Menu **Portal Saya → Slip Gaji Saya**. Menampilkan 24 periode terakhir.
 
 Klik **Unduh slip** (karyawan) atau **Unduh voucher** (mitra) untuk memperoleh PDF.
 Anda hanya dapat mengunduh dokumen milik sendiri.
+
+### 3.4 Knowledge Center
+
+Menu **Portal Saya → Knowledge Center**. Terbuka untuk semua peran.
+
+**Bulletin pengumuman** di kolom kiri. Pengumuman yang disematkan muncul paling atas
+dalam kotak tersendiri. Label kategori membedakan **Informasi**, **Kebijakan**, dan
+**Penting**.
+
+**SOP & Peraturan** di kolom kanan. Cari berdasarkan judul atau saring per jenis
+dokumen (SOP, Peraturan Perusahaan, Panduan, Formulir), lalu klik tautan unduh.
+
+> Isi halaman ini **disesuaikan dengan Anda**. Sebagian pengumuman dan dokumen hanya
+> ditujukan untuk divisi atau entitas kerja tertentu, jadi daftar yang Anda lihat bisa
+> berbeda dari rekan lain — itu normal, bukan kesalahan sistem.
 
 ---
 
@@ -284,6 +306,39 @@ Pada form **Konversi ke Karyawan**:
 Sistem membuat data karyawan otomatis dari data pelamar — tanpa input ulang — lengkap
 dengan NIK baru dan tanggal berakhir kontrak sesuai durasi entitas.
 
+### 5.7 Kelola Knowledge Center
+
+Menu **Manajemen → Kelola Knowledge**.
+
+**Membuat pengumuman:** klik **Buat pengumuman**, isi judul dan isi, pilih kategori,
+lalu tentukan audiens:
+
+| Ditujukan kepada | Yang melihat |
+| :--- | :--- |
+| **Seluruh perusahaan** | Semua orang |
+| **Divisi tertentu** | Hanya anggota divisi tersebut |
+| **Entitas kerja tertentu** | Hanya Probation, PKWT, atau Mitra |
+
+Dua penanda tambahan:
+
+* **Sematkan di atas** — pengumuman muncul di kotak terpisah paling atas.
+* **Terbitkan sekarang** — bila tidak dicentang, pengumuman tersimpan sebagai *draft*
+  dan belum terlihat karyawan. Terbitkan belakangan lewat tombol **Terbitkan**.
+
+**Mengunggah dokumen:** klik **Unggah dokumen** pada kartu Dokumen. Isi judul,
+deskripsi, jenis, versi, lalu pilih berkas (PDF/Word/Excel/PowerPoint, maks 10 MB) dan
+tentukan audiensnya seperti di atas.
+
+Kolom **Unduhan** pada tabel dokumen menunjukkan berapa kali berkas itu diambil —
+berguna untuk menilai SOP mana yang benar-benar dibaca.
+
+> Dokumen disimpan di penyimpanan privat. Karyawan hanya dapat mengunduh lewat sistem,
+> dan permintaan unduh diperiksa ulang terhadap audiens — bukan sekadar disembunyikan
+> dari daftar.
+
+Gunakan tombol **Lihat sebagai pembaca** untuk memastikan hasilnya tampil sebagaimana
+mestinya.
+
 ---
 
 ## 6. Portal Karier — untuk pelamar
@@ -323,10 +378,16 @@ audit log beserta pengunduh, waktu, dan filternya.
 
 ## 8. Pertanyaan yang sering muncul
 
-**Kenapa pengajuan cuti tahunan saya ditolak sistem?**
-Entitas kerja Anda kemungkinan Probation atau Mitra, yang tidak memiliki kuota cuti
-tahunan. Anda tetap dapat mengajukan izin sakit atau izin tanpa gaji. Penjelasannya
-tertera di kartu saldo pada halaman Cuti & Izin Saya.
+**Sebagai Probation/Mitra, apakah saya benar punya cuti tahunan?**
+Ya. Sejak kebijakan terbaru ketiga entitas memiliki kuota — Probation 3 hari, PKWT
+3/6/12 hari sesuai kontrak, dan Mitra 12 hari. Sisa kuota Anda tertera pada halaman
+Cuti & Izin Saya. Bila suatu saat pengajuan ditolak sistem, berarti HR menonaktifkan
+hak cuti untuk entitas Anda; kartu saldo akan menjelaskannya.
+
+**Kenapa pengajuan cuti saya ditolak karena melebihi kuota?**
+Total hari yang diajukan lebih besar dari sisa kuota tahun berjalan. Pesan
+penolakannya menyebutkan sisa kuota Anda. Ajukan dengan durasi lebih pendek, atau
+gunakan izin tanpa gaji.
 
 **Kenapa slip gaji saya tidak ada potongan BPJS?**
 Karyawan masa percobaan dan mitra belum didaftarkan BPJS, sehingga potongannya nol.
@@ -360,9 +421,14 @@ Anda mencentang opsi timpa.
 
 **Menu tertentu tidak muncul di sisi kiri.**
 Menu menyesuaikan peran. Manager tidak melihat Payroll dan Tenaga Kerja; karyawan
-hanya melihat Portal Saya. Hubungi HR bila Anda merasa seharusnya punya akses.
+hanya melihat Portal Saya (termasuk Knowledge Center). Hubungi HR bila Anda merasa
+seharusnya punya akses.
+
+**Rekan saya melihat pengumuman yang tidak ada di layar saya.**
+Pengumuman dan dokumen dapat ditujukan ke divisi atau entitas kerja tertentu. Bila
+konten itu bukan untuk kelompok Anda, sistem memang tidak menampilkannya.
 
 ---
 
-*Panduan ini mengikuti versi sistem per 2 Agustus 2026. Untuk daftar fitur yang belum
+*Panduan ini mengikuti versi sistem per 2 Agustus 2026 (Modul 1–5 aktif). Untuk daftar fitur yang belum
 tersedia, lihat bagian Batasan pada [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md).*
