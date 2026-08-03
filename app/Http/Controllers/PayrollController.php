@@ -34,6 +34,7 @@ class PayrollController extends Controller
                 'department' => $payroll->employee?->department?->name,
                 'type' => $payroll->employee?->employmentType?->name,
                 'payoutType' => $payroll->payout_type,
+                'slipType' => $payroll->slip_type,
                 'gross' => (float) $payroll->gross_amount,
                 'bpjs' => (float) $payroll->bpjs_employee_deduction,
                 'pph' => (float) $payroll->pph_deduction,
@@ -144,7 +145,11 @@ class PayrollController extends Controller
             'generatedAt' => now()->translatedFormat('d F Y H:i'),
         ])->setPaper('a4');
 
-        $prefix = $isMitra ? 'payment-voucher' : 'slip-gaji';
+        $prefix = match (true) {
+            $payroll->slip_type === 'incentive' => 'voucher-insentif',
+            $isMitra => 'payment-voucher',
+            default => 'slip-gaji',
+        };
         $fileName = sprintf(
             '%s-%s-%d%02d.pdf',
             $prefix,
@@ -281,6 +286,7 @@ class PayrollController extends Controller
                     'gross' => (float) $payroll->gross_amount,
                     'net' => (float) $payroll->net_payout,
                     'payoutType' => $payroll->payout_type,
+                    'slipType' => $payroll->slip_type,
                     'status' => $payroll->status,
                 ])
                 ->all(),
@@ -305,6 +311,7 @@ class PayrollController extends Controller
                 'isBpjsEligible' => (bool) $payroll->employee?->isBpjsEligible(),
             ],
             'payoutType' => $payroll->payout_type,
+            'slipType' => $payroll->slip_type,
             'status' => $payroll->status,
             'components' => [
                 'basic' => (float) $payroll->basic_amount,
@@ -323,6 +330,9 @@ class PayrollController extends Controller
                 'unitLabel' => $payroll->employee->mitraPayrollSchema->unit_label,
                 'taxScheme' => $payroll->employee->mitraPayrollSchema->tax_scheme,
             ] : null,
+            // Rincian yang sama dengan yang dicetak pada PDF, supaya HR dapat
+            // memeriksa angkanya sebelum slip dibagikan.
+            'details' => $payroll->details,
         ];
     }
 

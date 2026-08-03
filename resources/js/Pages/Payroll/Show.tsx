@@ -17,6 +17,7 @@ type Props = {
             isBpjsEligible: boolean;
         };
         payoutType: "employee" | "mitra";
+        slipType: "salary" | "incentive";
         status: string;
         components: {
             basic: number;
@@ -35,7 +36,41 @@ type Props = {
             unitLabel: string | null;
             taxScheme: string;
         } | null;
+        details: PayrollDetails | null;
     };
+};
+
+type BpjsItem = {
+    label: string;
+    companyRate: number;
+    workerRate: number;
+    companyAmount: number;
+    workerAmount: number;
+    total: number;
+};
+
+type PayrollDetails = {
+    bpjs?: {
+        wageBase: number;
+        items: BpjsItem[];
+        companyPortion: number;
+        workerPortion: number;
+        grandTotal: number;
+    } | null;
+    // Skema penjualan mitra — slip gaji
+    basis?: "allowance" | "bonus";
+    presentDays?: number;
+    workingDays?: number;
+    totalUnits?: number;
+    monthlyAllowance?: number;
+    monthlyBase?: number;
+    dailyBaseRate?: number;
+    bonusPercentage?: number;
+    umpReference?: number;
+    // Slip insentif
+    lines?: { product: string; quantity: number; rate: number; subtotal: number }[];
+    incentiveAmount?: number;
+    taxAmount?: number;
 };
 
 export default function PayrollShow({ payroll }: Props) {
@@ -44,7 +79,13 @@ export default function PayrollShow({ payroll }: Props) {
 
     return (
         <AppLayout
-            title={isMitra ? "Payment Voucher" : "Slip Gaji"}
+            title={
+                payroll.slipType === "incentive"
+                    ? "Voucher Insentif Penjualan"
+                    : isMitra
+                      ? "Payment Voucher"
+                      : "Slip Gaji"
+            }
             subtitle={`${employee.name} · ${payroll.period}`}
             actions={
                 <div className="flex items-center gap-2">
@@ -153,14 +194,170 @@ export default function PayrollShow({ payroll }: Props) {
                             </tbody>
                         </table>
 
-                        {!isMitra && employee.isBpjsEligible && (
-                            <p className="mt-4 rounded-lg bg-surface-soft px-3 py-2 text-[11px] text-ink-soft">
-                                Kontribusi perusahaan{" "}
-                                {rupiah(amount.bpjsCompany)} tidak memotong gaji
-                                karyawan.
-                            </p>
-                        )}
                     </Card>
+
+                    {payroll.details?.basis && (
+                        <Card
+                            title="Dasar gaji skema penjualan"
+                            subtitle={`${payroll.details.presentDays} dari ${payroll.details.workingDays} hari kerja`}
+                        >
+                            <table className="w-full text-sm">
+                                <tbody>
+                                    <AmountRow
+                                        label={
+                                            payroll.details.basis === "bonus"
+                                                ? `Bonus pencapaian — ${payroll.details.totalUnits} unit → ${payroll.details.bonusPercentage}% UMP`
+                                                : `Uang makan & transport — ${payroll.details.totalUnits} unit, belum capai tier`
+                                        }
+                                        value={payroll.details.monthlyBase ?? 0}
+                                    />
+                                    {payroll.details.basis === "bonus" && (
+                                        <tr className="border-b border-hairline">
+                                            <td className="py-2 text-ink-muted line-through">
+                                                Uang makan &amp; transport —
+                                                digantikan bonus
+                                            </td>
+                                            <td className="tabular py-2 text-right text-ink-muted line-through">
+                                                {rupiah(
+                                                    payroll.details
+                                                        .monthlyAllowance ?? 0,
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )}
+                                    <AmountRow
+                                        label={`Tarif harian (÷ ${payroll.details.workingDays} hari)`}
+                                        value={payroll.details.dailyBaseRate ?? 0}
+                                    />
+                                    <AmountRow
+                                        label={`Dibayarkan (× ${payroll.details.presentDays} hari hadir)`}
+                                        value={amount.gross}
+                                        emphasis
+                                    />
+                                </tbody>
+                            </table>
+
+                            {payroll.details.basis === "bonus" && (
+                                <p className="mt-3 rounded-lg bg-surface-soft px-3 py-2 text-[11px] text-ink-soft">
+                                    Bonus pencapaian <strong>menggantikan</strong>{" "}
+                                    uang makan &amp; transport sebagai dasar gaji,
+                                    bukan menambahnya. Insentif per unit dibayar
+                                    penuh pada slip terpisah.
+                                </p>
+                            )}
+                        </Card>
+                    )}
+
+                    {payroll.details?.lines && (
+                        <Card
+                            title="Rincian insentif per produk"
+                            subtitle={`${payroll.details.totalUnits} unit terjual`}
+                        >
+                            <table className="w-full text-sm">
+                                <tbody>
+                                    {payroll.details.lines.map((baris) => (
+                                        <AmountRow
+                                            key={baris.product}
+                                            label={`${baris.product} — ${baris.quantity} unit × ${rupiah(baris.rate)}`}
+                                            value={baris.subtotal}
+                                        />
+                                    ))}
+                                    <AmountRow
+                                        label="Total insentif"
+                                        value={payroll.details.incentiveAmount ?? 0}
+                                        emphasis
+                                    />
+                                </tbody>
+                            </table>
+                        </Card>
+                    )}
+
+                    {payroll.details?.bpjs && (
+                        <Card
+                            title="Iuran BPJS ditanggung perusahaan"
+                            subtitle={`Dasar upah ${rupiah(payroll.details.bpjs.wageBase)} — tidak memotong penerimaan`}
+                        >
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[460px] text-sm">
+                                    <thead>
+                                        <tr className="border-b border-hairline text-left text-xs text-ink-muted">
+                                            <th className="pb-2 font-medium">
+                                                Program
+                                            </th>
+                                            <th className="pb-2 text-right font-medium">
+                                                Perusahaan
+                                            </th>
+                                            <th className="pb-2 text-right font-medium">
+                                                Porsi pekerja
+                                            </th>
+                                            <th className="pb-2 text-right font-medium">
+                                                Jumlah
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {payroll.details.bpjs.items.map((item) => (
+                                            <tr
+                                                key={item.label}
+                                                className="border-b border-hairline last:border-0"
+                                            >
+                                                <td className="py-2 text-ink-soft">
+                                                    {item.label}
+                                                </td>
+                                                <td className="tabular py-2 text-right text-ink">
+                                                    {rupiah(item.companyAmount)}
+                                                    <span className="block text-[10px] text-ink-muted">
+                                                        {item.companyRate}%
+                                                    </span>
+                                                </td>
+                                                <td className="tabular py-2 text-right text-ink">
+                                                    {item.workerRate > 0
+                                                        ? rupiah(item.workerAmount)
+                                                        : "—"}
+                                                    {item.workerRate > 0 && (
+                                                        <span className="block text-[10px] text-ink-muted">
+                                                            {item.workerRate}%
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="tabular py-2 text-right font-medium text-ink">
+                                                    {rupiah(item.total)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        <tr>
+                                            <td className="py-2 text-sm font-semibold text-ink">
+                                                Total
+                                            </td>
+                                            <td className="tabular py-2 text-right font-semibold text-ink">
+                                                {rupiah(
+                                                    payroll.details.bpjs
+                                                        .companyPortion,
+                                                )}
+                                            </td>
+                                            <td className="tabular py-2 text-right font-semibold text-ink">
+                                                {rupiah(
+                                                    payroll.details.bpjs
+                                                        .workerPortion,
+                                                )}
+                                            </td>
+                                            <td className="tabular py-2 text-right font-semibold text-ink">
+                                                {rupiah(
+                                                    payroll.details.bpjs
+                                                        .grandTotal,
+                                                )}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <p className="mt-3 rounded-lg bg-surface-soft px-3 py-2 text-[11px] text-ink-soft">
+                                Porsi pekerja ikut dibayarkan perusahaan, sehingga
+                                potongan BPJS pada slip bernilai {rupiah(0)}.
+                            </p>
+                        </Card>
+                    )}
                 </div>
 
                 <div className="space-y-5">

@@ -29,6 +29,7 @@ type Row = {
     department: string | null;
     type: string | null;
     payoutType: "employee" | "mitra";
+    slipType: "salary" | "incentive";
     gross: number;
     bpjs: number;
     pph: number;
@@ -328,6 +329,11 @@ export default function PayrollIndex({
                                                 <p className="text-xs text-ink-muted">
                                                     {row.nik} · {row.type}
                                                 </p>
+                                                {row.slipType === "incentive" && (
+                                                    <span className="mt-1 inline-flex rounded-md bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700">
+                                                        slip insentif penjualan
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="tabular py-2.5 text-right text-ink-soft">
                                                 {rupiah(row.gross)}
@@ -358,9 +364,11 @@ export default function PayrollIndex({
                                                     href={`/slip-gaji/${row.id}/dokumen`}
                                                     className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
                                                 >
-                                                    {row.payoutType === "mitra"
-                                                        ? "Voucher"
-                                                        : "Slip"}{" "}
+                                                    {row.slipType === "incentive"
+                                                        ? "Voucher insentif"
+                                                        : row.payoutType === "mitra"
+                                                          ? "Voucher"
+                                                          : "Slip"}{" "}
                                                     PDF
                                                 </a>
                                             </td>

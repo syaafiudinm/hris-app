@@ -11,6 +11,7 @@ type Props = {
         gross: number;
         net: number;
         payoutType: "employee" | "mitra";
+        slipType: "salary" | "incentive";
         status: string;
     }[];
 };
@@ -73,9 +74,11 @@ export default function PayrollMine({ payrolls }: Props) {
                                                 className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
                                             >
                                                 Unduh{" "}
-                                                {row.payoutType === "mitra"
-                                                    ? "voucher"
-                                                    : "slip"}
+                                                {row.slipType === "incentive"
+                                                    ? "voucher insentif"
+                                                    : row.payoutType === "mitra"
+                                                      ? "voucher"
+                                                      : "slip"}
                                             </a>
                                         </td>
                                     </tr>

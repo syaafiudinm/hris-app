@@ -24,16 +24,19 @@ Sistem ini mengelola tiga jenis tenaga kerja, dan **hak tiap jenis berbeda**:
 
 | Entitas | Cuti tahunan | BPJS | Cara dibayar |
 | :--- | :--- | :--- | :--- |
-| **Probation** (3 bulan) | 3 hari | Belum didaftarkan | Gaji pokok + tunjangan + lembur |
-| **PKWT** (3/6/12 bulan) | 3 / 6 / 12 hari | Didaftarkan | Gaji pokok + tunjangan + lembur |
-| **Mitra / Freelance** | 12 hari | Tidak ikut | Skema custom (per jam/hari/proyek/unit) |
+| **Probation** (3 bulan) | 3 hari | Ditanggung perusahaan | Gaji pokok + tunjangan + lembur |
+| **PKWT** (3/6/12 bulan) | 3 / 6 / 12 hari | Ditanggung perusahaan | Gaji pokok + tunjangan + lembur |
+| **Mitra / Freelance** | 12 hari | Ditanggung perusahaan | Skema custom, termasuk **kompensasi penjualan** |
 
-Sejak kebijakan terbaru, **ketiga entitas berhak cuti tahunan** dengan kuota
-proporsional terhadap durasi kontrak. Aturan BPJS tidak ikut berubah: Probation dan
-Mitra tetap dikecualikan.
+Dua kebijakan yang berlaku untuk **ketiga entitas**:
+
+* **Cuti tahunan** — semuanya punya kuota, proporsional terhadap durasi kontrak.
+* **BPJS** — semuanya didaftarkan, dan **iurannya ditanggung penuh perusahaan**.
+  Porsi pekerja (1% Kesehatan + 2% JHT + 1% JP) tidak dipotong dari penerimaan;
+  perusahaan yang menalanginya. Slip gaji menampilkan potongan BPJS Rp 0.
 
 Perbedaan ini **ditegakkan otomatis oleh sistem**, bukan bergantung pada ketelitian
-petugas. Slip gaji karyawan probation, misalnya, tidak akan pernah memotong BPJS.
+petugas.
 
 > Kuota dan hak di atas adalah konfigurasi, bukan aturan mati. HR dapat mengubahnya
 > kapan saja lewat menu **Entitas Kerja** — lihat bagian 5.2.
@@ -118,6 +121,20 @@ Menu **Portal Saya → Slip Gaji Saya**. Menampilkan 24 periode terakhir.
 
 Klik **Unduh slip** (karyawan) atau **Unduh voucher** (mitra) untuk memperoleh PDF.
 Anda hanya dapat mengunduh dokumen milik sendiri.
+
+**Isi slip gaji karyawan** dibagi tiga bagian:
+
+* **A. Penerimaan** — gaji pokok, tunjangan tetap (beserta persentasenya), dan upah
+  lembur lengkap dengan jumlah jam serta tarif per jamnya.
+* **B. Potongan** — PPh 21, dan baris BPJS yang bernilai Rp 0 disertai keterangan
+  berapa yang *seharusnya* menjadi porsi Anda.
+* **C. Iuran BPJS yang dibayarkan perusahaan** — tabel per program (Kesehatan, JHT,
+  JKM, JKK, JP) dengan persentase dan nominal porsi perusahaan maupun porsi pekerja
+  yang ditalangi. Bagian ini **bukan pengurang** gaji Anda.
+
+**Isi voucher mitra** menyesuaikan skemanya. Untuk skema penjualan ada dua slip:
+slip gaji merinci dasar gaji (uang makan atau bonus) beserta perhitungan prorata
+hari hadir, sedangkan slip insentif merinci tiap produk yang terjual.
 
 ### 3.4 Knowledge Center
 
@@ -241,11 +258,57 @@ Klik **Atur** atau **Ubah**, lalu pilih tipe skema:
 | **Fixed Project Fee** | Dibayar penuh satu kali per periode |
 | **Deliverable / Milestone** | Persentase penyelesaian |
 | **Unit / Output** | Diisi manual |
+| **Kompensasi Penjualan** | Uang makan + insentif per unit + bonus tier UMP — unit diinput di menu Penjualan Mitra (bagian 5.5) |
 
 Lengkapi tarif, satuan, skema pajak, dan persentase pajaknya. Tunjangan transport
 bersifat opsional dan ditambahkan ke bruto setiap periode.
 
-### 5.5 Lowongan
+### 5.5 Penjualan Mitra
+
+Menu **Manajemen → Penjualan Mitra**. Dipakai bila ada mitra dengan skema
+**Kompensasi Penjualan**.
+
+**Katalog produk** di kolom kanan — tiap produk punya insentif per unit terjual
+(mis. EX2 Rp 500.000, EX5 Rp 2.000.000, Starray Rp 3.000.000). Klik **Tambah** untuk
+produk baru, atau **Ubah** untuk menyesuaikan insentifnya. Produk yang sudah terpakai
+pada catatan penjualan tidak dapat dihapus — nonaktifkan saja agar riwayatnya utuh.
+
+**Input unit terjual:** pilih bulan dan tahun, lalu isi jumlah unit tiap produk pada
+kartu mitra bersangkutan. Total unit, insentif, dan tier bonus dihitung langsung di
+layar sebelum disimpan.
+
+> Setelah menyimpan, **jalankan ulang payroll periode itu** agar angkanya masuk ke
+> slip. Sistem tidak menghitung ulang slip yang sudah terbit secara otomatis.
+
+Setiap periode menghasilkan **dua slip terpisah**:
+
+**Slip 1 — Gaji.** Isinya salah satu, bukan keduanya:
+
+| Kondisi | Gaji bulanan |
+| :--- | :--- |
+| Belum memenuhi tier (0–1 unit) | Uang makan & transport Rp 1.000.000 |
+| Memenuhi tier | Bonus **menggantikan** uang makan: 2 unit → 50% UMP, 3 unit → 75%, 4 unit → 100% |
+
+Nilai itu lalu diprorata: **÷ 26 hari kerja × hari hadir**. Slip ini tidak dipotong pajak.
+
+> **Bonus menimpa, bukan menambah.** Mitra yang mencapai target tidak menerima
+> uang makan *dan* bonus sekaligus — bonusnya menjadi gaji bulanannya. Karena semua
+> tier bernilai di atas Rp 1.000.000, mencapai target selalu berarti gaji naik.
+
+**Slip 2 — Insentif penjualan.** Unit terjual × insentif tiap produk, **tidak diprorata**
+hari hadir, dipotong pajak 50% × 2,5%. Slip ini hanya terbit bila ada penjualan.
+
+Contoh mitra yang menjual 4 unit (2 EX2 + 1 EX5 + 1 Starray) dengan hadir 18 dari 26 hari:
+
+| Slip | Perhitungan | Jumlah |
+| :--- | :--- | :--- |
+| Gaji | 100% × 3.921.000 × 18/26 | 2.714.538 |
+| Insentif | 6.000.000 − pajak 75.000 | 5.925.000 |
+
+Nilai uang makan, jumlah hari kerja, UMP acuan, tier bonus, dan tarif pajak diatur
+per mitra pada menu **Skema Mitra**.
+
+### 5.6 Lowongan
 
 Menu **Manajemen → Lowongan**. Inilah sumber data Portal Karier.
 
@@ -267,7 +330,7 @@ Tanggal publikasi terisi otomatis saat pertama kali dibuka.
 > riwayat rekrutmen tidak ikut terhapus. Tombol Hapus hanya muncul bila pelamarnya
 > masih nol.
 
-### 5.6 Rekrutmen (ATS)
+### 5.7 Rekrutmen (ATS)
 
 Menu **Manajemen → Rekrutmen (ATS)**.
 
@@ -306,7 +369,7 @@ Pada form **Konversi ke Karyawan**:
 Sistem membuat data karyawan otomatis dari data pelamar — tanpa input ulang — lengkap
 dengan NIK baru dan tanggal berakhir kontrak sesuai durasi entitas.
 
-### 5.7 Proses Keluar & Paklaring
+### 5.8 Proses Keluar & Paklaring
 
 Menu **Manajemen → Proses Keluar**. Dipakai saat karyawan mengundurkan diri,
 kontraknya berakhir, di-PHK, atau pensiun.
@@ -347,7 +410,7 @@ Draft yang belum dituntaskan boleh dihapus; yang sudah tuntas tidak bisa.
 Kartu **Kontrak habis H-30** di atas menunjukkan karyawan yang kontraknya segera
 berakhir tapi belum dibuatkan proses keluar.
 
-### 5.8 Kelola Knowledge Center
+### 5.9 Kelola Knowledge Center
 
 Menu **Manajemen → Kelola Knowledge**.
 
@@ -431,8 +494,27 @@ penolakannya menyebutkan sisa kuota Anda. Ajukan dengan durasi lebih pendek, ata
 gunakan izin tanpa gaji.
 
 **Kenapa slip gaji saya tidak ada potongan BPJS?**
-Karyawan masa percobaan dan mitra belum didaftarkan BPJS, sehingga potongannya nol.
-Slip gaji mencantumkan keterangan ini secara eksplisit.
+Karena iuran BPJS **ditanggung penuh perusahaan** — termasuk porsi pekerja. Anda tetap
+terdaftar sebagai peserta; yang nol hanyalah potongannya. Nilai yang dibayarkan
+perusahaan tercantum sebagai keterangan pada slip.
+
+**Bonus penjualan saya tidak penuh, kenapa?**
+Bonus diprorata terhadap hari hadir. Hadir 20 dari 26 hari kerja berarti Anda menerima
+20/26 bagian. Uang makan & transport mengikuti aturan yang sama; hanya insentif per
+unit yang dibayar penuh tanpa melihat kehadiran.
+
+**Saya capai target, tapi kenapa uang makan saya hilang dari slip?**
+Memang begitu aturannya: bonus pencapaian **menggantikan** uang makan & transport
+sebagai gaji bulanan, bukan ditambahkan. Karena semua tier bernilai di atas
+Rp 1.000.000, gaji Anda tetap naik dibanding bulan tanpa penjualan.
+
+**Kenapa saya menerima dua slip dalam satu bulan?**
+Gaji dan insentif penjualan sengaja dipisah. Slip gaji berisi uang makan atau bonus
+pencapaian; slip insentif berisi komisi per unit terjual beserta potongan pajaknya.
+
+**Saya sudah input penjualan tapi slip mitra belum berubah.**
+Jalankan ulang payroll untuk periode tersebut lewat menu Payroll. Slip berstatus
+*paid* tidak akan ditimpa kecuali opsi timpa dicentang.
 
 **Kenapa ada mitra yang tidak muncul di hasil payroll?**
 Mitra tanpa skema pembayaran akan dilewati. Buka **Skema Mitra**, centang
@@ -479,5 +561,5 @@ konten itu bukan untuk kelompok Anda, sistem memang tidak menampilkannya.
 
 ---
 
-*Panduan ini mengikuti versi sistem per 2 Agustus 2026 (Modul 1–5 aktif). Untuk daftar fitur yang belum
+*Panduan ini mengikuti versi sistem per 3 Agustus 2026 (Modul 1–5 aktif, termasuk skema kompensasi penjualan mitra). Untuk daftar fitur yang belum
 tersedia, lihat bagian Batasan pada [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md).*

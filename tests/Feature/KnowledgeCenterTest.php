@@ -200,13 +200,16 @@ test('ketiga entitas kerja berhak cuti tahunan', function () {
     }
 });
 
-test('probation dan mitra tetap dikecualikan dari BPJS', function () {
-    foreach (['probation', 'mitra'] as $category) {
+// Kebijakan perusahaan berubah: ketiga entitas kini didaftarkan BPJS dan
+// iurannya ditanggung perusahaan. Rincian perhitungannya diuji pada
+// SalesCompensationTest.
+test('ketiga entitas kerja didaftarkan BPJS', function () {
+    foreach (['probation', 'pkwt', 'mitra'] as $category) {
         $employee = Employee::whereHas(
             'employmentType',
             fn ($query) => $query->where('category', $category),
         )->firstOrFail();
 
-        expect($employee->isBpjsEligible())->toBeFalse();
+        expect($employee->isBpjsEligible())->toBeTrue("entitas {$category}");
     }
 });

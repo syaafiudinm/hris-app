@@ -9,8 +9,10 @@ use App\Models\MitraPayrollSchema;
  * Mesin kalkulasi kompensasi.
  *
  * Rule enforcement (Masterplan §5.2):
- *  - BPJS hanya dihitung bila employment_types.is_bpjs_eligible = true
- *    (Probation & Mitra otomatis 0).
+ *  - BPJS hanya dihitung bila employment_types.is_bpjs_eligible = true.
+ *  - Iuran BPJS **ditanggung sepenuhnya perusahaan** sesuai kebijakan
+ *    perusahaan pengguna: porsi pekerja tidak dipotong dari take home pay,
+ *    melainkan ikut dibayarkan perusahaan.
  *  - Mitra tidak melewati skema gaji karyawan sama sekali; kalkulasi dibaca
  *    dari mitra_payroll_schemas.
  */
@@ -45,24 +47,11 @@ class PayrollCalculator
         $gross = $basic + $allowance + $overtime;
         $bpjsEligible = $employee->isBpjsEligible();
 
+        $companyContribution = $bpjsEligible ? $this->bpjsCompanyCost($basic) : 0.0;
+
+        // Porsi pekerja tetap dibayarkan perusahaan, jadi tidak mengurangi
+        // penerimaan karyawan.
         $employeeDeduction = 0.0;
-        $companyContribution = 0.0;
-
-        if ($bpjsEligible) {
-            $jpBase = min($basic, self::JP_SALARY_CAP);
-
-            $employeeDeduction =
-                $basic * self::BPJS_KES_EMPLOYEE
-                + $basic * self::BPJS_JHT_EMPLOYEE
-                + $jpBase * self::BPJS_JP_EMPLOYEE;
-
-            $companyContribution =
-                $basic * self::BPJS_KES_COMPANY
-                + $basic * self::BPJS_JHT_COMPANY
-                + $basic * self::BPJS_JKM_COMPANY
-                + $basic * self::BPJS_JKK_COMPANY
-                + $jpBase * self::BPJS_JP_COMPANY;
-        }
 
         $pph = $this->pph21Ter($gross);
         $net = $gross - $employeeDeduction - $pph;
@@ -82,6 +71,82 @@ class PayrollCalculator
     }
 
     /**
+     * Rincian iuran BPJS per program, untuk dicetak pada slip.
+     *
+     * Seluruhnya ditanggung perusahaan — kolom "porsi pekerja" tetap
+     * ditampilkan agar pekerja tahu berapa yang seharusnya ia bayar sendiri
+     * dan kini ditalangi perusahaan.
+     *
+     * @return array<string, mixed>
+     */
+    public function bpjsBreakdown(float $wage): array
+    {
+        $jpBase = min($wage, self::JP_SALARY_CAP);
+
+        $programs = [
+            ['label' => 'BPJS Kesehatan', 'base' => $wage, 'company' => self::BPJS_KES_COMPANY, 'worker' => self::BPJS_KES_EMPLOYEE],
+            ['label' => 'BPJS TK — Jaminan Hari Tua (JHT)', 'base' => $wage, 'company' => self::BPJS_JHT_COMPANY, 'worker' => self::BPJS_JHT_EMPLOYEE],
+            ['label' => 'BPJS TK — Jaminan Kematian (JKM)', 'base' => $wage, 'company' => self::BPJS_JKM_COMPANY, 'worker' => 0.0],
+            ['label' => 'BPJS TK — Jaminan Kecelakaan Kerja (JKK)', 'base' => $wage, 'company' => self::BPJS_JKK_COMPANY, 'worker' => 0.0],
+            ['label' => 'BPJS TK — Jaminan Pensiun (JP)', 'base' => $jpBase, 'company' => self::BPJS_JP_COMPANY, 'worker' => self::BPJS_JP_EMPLOYEE],
+        ];
+
+        $items = [];
+        $companyTotal = 0.0;
+        $workerTotal = 0.0;
+
+        foreach ($programs as $program) {
+            $companyAmount = $program['base'] * $program['company'];
+            $workerAmount = $program['base'] * $program['worker'];
+
+            $companyTotal += $companyAmount;
+            $workerTotal += $workerAmount;
+
+            $items[] = [
+                'label' => $program['label'],
+                'companyRate' => round($program['company'] * 100, 2),
+                'workerRate' => round($program['worker'] * 100, 2),
+                'companyAmount' => round($companyAmount, 2),
+                'workerAmount' => round($workerAmount, 2),
+                'total' => round($companyAmount + $workerAmount, 2),
+            ];
+        }
+
+        return [
+            'wageBase' => round($wage, 2),
+            'jpBase' => round($jpBase, 2),
+            'items' => $items,
+            // Porsi pekerja yang ditalangi perusahaan.
+            'workerPortion' => round($workerTotal, 2),
+            'companyPortion' => round($companyTotal, 2),
+            'grandTotal' => round($companyTotal + $workerTotal, 2),
+        ];
+    }
+
+    /**
+     * Total biaya BPJS yang ditanggung perusahaan atas suatu upah —
+     * porsi perusahaan ditambah porsi pekerja yang ikut ditalangi.
+     */
+    public function bpjsCompanyCost(float $wage): float
+    {
+        $jpBase = min($wage, self::JP_SALARY_CAP);
+
+        $companyPortion =
+            $wage * self::BPJS_KES_COMPANY
+            + $wage * self::BPJS_JHT_COMPANY
+            + $wage * self::BPJS_JKM_COMPANY
+            + $wage * self::BPJS_JKK_COMPANY
+            + $jpBase * self::BPJS_JP_COMPANY;
+
+        $workerPortion =
+            $wage * self::BPJS_KES_EMPLOYEE
+            + $wage * self::BPJS_JHT_EMPLOYEE
+            + $jpBase * self::BPJS_JP_EMPLOYEE;
+
+        return $companyPortion + $workerPortion;
+    }
+
+    /**
      * Pembayaran mitra berdasarkan skema custom.
      *
      * @param  float  $quantity  jam kerja / hari kerja / unit / persentase milestone
@@ -97,9 +162,10 @@ class PayrollCalculator
 
         $base = match ($schema->schema_type) {
             'fixed_project' => $rate,
-            'hourly', 'daily', 'unit' => $rate * $quantity,
             // milestone: quantity = persentase penyelesaian (0..1)
-            'milestone' => $rate * $quantity,
+            // Skema 'sales' punya jalurnya sendiri dan tidak sampai ke sini;
+            // default menjaga agar tipe baru tidak melempar UnhandledMatchError.
+            default => $rate * $quantity,
         };
 
         $gross = $base + $bonus;
@@ -112,13 +178,153 @@ class PayrollCalculator
             'allowance_amount' => round($bonus, 2),
             'overtime_amount' => 0.0,
             'gross_amount' => round($gross, 2),
-            // Mitra tidak masuk kepesertaan BPJS perusahaan.
+            // Iuran mitra pun ditanggung perusahaan; nilainya dihitung
+            // PayrollRunService karena bergantung pada dasar upah yang dipakai.
             'bpjs_employee_deduction' => 0.0,
             'bpjs_company_contribution' => 0.0,
             'pph_deduction' => round($tax, 2),
             'other_deduction' => round($penalty, 2),
             'net_payout' => round($net, 2),
         ];
+    }
+
+    /**
+     * Slip GAJI mitra berskema penjualan.
+     *
+     * Bonus tier bersifat **menggantikan**, bukan menambah: bila target unit
+     * tercapai, nilai bonus menimpa uang makan & transport sebagai gaji
+     * bulanan. Bila tidak tercapai, mitra tetap menerima uang makan.
+     * Keduanya diprorata terhadap hari hadir.
+     *
+     * Insentif penjualan tidak ikut di sini — lihat calculateSalesIncentive().
+     *
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    public function calculateSalesSalary(int $totalUnits, int $presentDays, array $config): array
+    {
+        $workingDays = max((int) ($config['working_days'] ?? 26), 1);
+        $allowance = (float) ($config['monthly_allowance'] ?? 0);
+        $ump = (float) ($config['ump_reference'] ?? 0);
+
+        // Hari hadir dibatasi agar kelebihan hadir tidak melipatkan gaji.
+        $effectiveDays = min($presentDays, $workingDays);
+        $proration = $effectiveDays / $workingDays;
+
+        $bonusPercentage = $this->bonusPercentageForUnits($totalUnits, $config['bonus_tiers'] ?? []);
+        $achieved = $bonusPercentage > 0;
+
+        // Dasar gaji bulanan: bonus tier bila tercapai, selain itu uang makan.
+        $monthlyBase = $achieved ? $ump * ($bonusPercentage / 100) : $allowance;
+        $gross = $monthlyBase * $proration;
+
+        return [
+            'payout_type' => 'mitra',
+            'slip_type' => 'salary',
+            'basic_amount' => round($gross, 2),
+            'allowance_amount' => 0.0,
+            'overtime_amount' => 0.0,
+            'gross_amount' => round($gross, 2),
+            'bpjs_employee_deduction' => 0.0,
+            'bpjs_company_contribution' => 0.0,
+            // Pajak hanya mengenai insentif, jadi slip gaji tidak dipotong.
+            'pph_deduction' => 0.0,
+            'other_deduction' => 0.0,
+            'net_payout' => round($gross, 2),
+            'sales_breakdown' => [
+                'basis' => $achieved ? 'bonus' : 'allowance',
+                'presentDays' => $effectiveDays,
+                'workingDays' => $workingDays,
+                'totalUnits' => $totalUnits,
+                'monthlyAllowance' => round($allowance, 2),
+                'dailyAllowanceRate' => round($allowance / $workingDays, 2),
+                'bonusPercentage' => $bonusPercentage,
+                'umpReference' => round($ump, 2),
+                'monthlyBase' => round($monthlyBase, 2),
+                'dailyBaseRate' => round($monthlyBase / $workingDays, 2),
+            ],
+        ];
+    }
+
+    /**
+     * Slip INSENTIF penjualan mitra — dibayarkan terpisah dari slip gaji.
+     *
+     * Tidak diprorata hari hadir; besarnya murni dari unit terjual.
+     * Pajak 50% x 2,5% dikenakan di sini.
+     *
+     * @param  array<int, array{quantity: int, incentive: float}>  $sales
+     * @param  array<string, mixed>  $config
+     * @return array<string, mixed>
+     */
+    public function calculateSalesIncentive(array $sales, array $config): array
+    {
+        $taxBasePercentage = (float) ($config['incentive_tax_base_percentage'] ?? 50);
+        $taxRate = (float) ($config['incentive_tax_rate'] ?? 2.5);
+
+        $incentive = 0.0;
+        $totalUnits = 0;
+        $lines = [];
+
+        foreach ($sales as $line) {
+            $quantity = (int) ($line['quantity'] ?? 0);
+            $rate = (float) ($line['incentive'] ?? 0);
+            $subtotal = $quantity * $rate;
+
+            $incentive += $subtotal;
+            $totalUnits += $quantity;
+
+            $lines[] = [
+                'product' => $line['product'] ?? '-',
+                'quantity' => $quantity,
+                'rate' => round($rate, 2),
+                'subtotal' => round($subtotal, 2),
+            ];
+        }
+
+        $tax = $incentive * ($taxBasePercentage / 100) * ($taxRate / 100);
+
+        return [
+            'payout_type' => 'mitra',
+            'slip_type' => 'incentive',
+            'basic_amount' => round($incentive, 2),
+            'allowance_amount' => 0.0,
+            'overtime_amount' => 0.0,
+            'gross_amount' => round($incentive, 2),
+            'bpjs_employee_deduction' => 0.0,
+            'bpjs_company_contribution' => 0.0,
+            'pph_deduction' => round($tax, 2),
+            'other_deduction' => 0.0,
+            'net_payout' => round($incentive - $tax, 2),
+            'sales_breakdown' => [
+                'totalUnits' => $totalUnits,
+                'incentiveAmount' => round($incentive, 2),
+                'taxBasePercentage' => $taxBasePercentage,
+                'taxRate' => $taxRate,
+                'taxAmount' => round($tax, 2),
+                'lines' => $lines,
+            ],
+        ];
+    }
+
+    /**
+     * Persentase bonus berdasarkan total unit terjual. Tier tertinggi yang
+     * syaratnya terpenuhi yang dipakai.
+     *
+     * @param  array<int, array{units: int|string, percentage: int|float|string}>  $tiers
+     */
+    public function bonusPercentageForUnits(int $totalUnits, array $tiers): float
+    {
+        $percentage = 0.0;
+
+        foreach ($tiers as $tier) {
+            $requiredUnits = (int) ($tier['units'] ?? 0);
+
+            if ($totalUnits >= $requiredUnits && $requiredUnits > 0) {
+                $percentage = max($percentage, (float) ($tier['percentage'] ?? 0));
+            }
+        }
+
+        return $percentage;
     }
 
     /**

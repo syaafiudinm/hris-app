@@ -15,6 +15,8 @@ use App\Models\LeaveRequest;
 use App\Models\MitraPayrollSchema;
 use App\Models\OfficeLocation;
 use App\Models\Payroll;
+use App\Models\SalesProduct;
+use App\Models\SalesRecord;
 use App\Models\User;
 use App\Services\ExitService;
 use App\Services\PayrollCalculator;
@@ -54,6 +56,114 @@ class HrisDemoSeeder extends Seeder
         $this->seedRecruitment();
         $this->seedKnowledgeCenter();
         $this->seedExits();
+        $this->seedSales();
+    }
+
+    /**
+     * Konfigurasi baku skema penjualan mitra.
+     *
+     * Angka mengikuti kebijakan perusahaan pengguna; seluruhnya dapat diubah
+     * HR per mitra lewat halaman Skema Mitra.
+     *
+     * @return array<string, mixed>
+     */
+    public static function salesSchemeDefaults(): array
+    {
+        return [
+            'monthly_allowance' => 1_000_000,   // uang makan & transport per bulan
+            'working_days' => 26,               // 1 bulan = 26 hari kerja
+            'ump_reference' => 3_921_000,       // UMP Sulawesi Selatan
+            'bonus_tiers' => [
+                ['units' => 2, 'percentage' => 50],
+                ['units' => 3, 'percentage' => 75],
+                ['units' => 4, 'percentage' => 100],
+            ],
+            'incentive_tax_base_percentage' => 50,  // 50% dari insentif
+            'incentive_tax_rate' => 2.5,            // x 2,5%
+            // Dasar upah pelaporan BPJS mitra — penghasilannya variabel,
+            // jadi dipatok pada UMP.
+            'bpjs_wage_base' => 3_921_000,
+        ];
+    }
+
+    /**
+     * Katalog produk, mitra bertipe penjualan, dan catatan unit terjual.
+     */
+    private function seedSales(): void
+    {
+        $products = [
+            ['code' => 'ex2', 'name' => 'EX2', 'incentive_amount' => 500_000],
+            ['code' => 'ex5', 'name' => 'EX5', 'incentive_amount' => 2_000_000],
+            ['code' => 'starray', 'name' => 'Starray', 'incentive_amount' => 3_000_000],
+        ];
+
+        foreach ($products as $product) {
+            SalesProduct::updateOrCreate(['code' => $product['code']], $product);
+        }
+
+        $catalog = SalesProduct::orderBy('id')->get();
+
+        // Pindahkan sebagian mitra ke skema penjualan.
+        $salesMitra = Employee::active()
+            ->whereHas('employmentType', fn ($query) => $query->where('category', 'mitra'))
+            ->limit(5)
+            ->get();
+
+        $period = CarbonImmutable::now();
+
+        foreach ($salesMitra as $index => $mitra) {
+            MitraPayrollSchema::updateOrCreate(
+                ['employee_id' => $mitra->id],
+                [
+                    'schema_type' => 'sales',
+                    'rate_per_unit' => 0,
+                    'unit_label' => 'unit',
+                    'tax_scheme' => 'pph21_tidak_berkesinambungan',
+                    'custom_tax_percentage' => 2.5,
+                    'components' => self::salesSchemeDefaults(),
+                ],
+            );
+
+            // Sebar penjualan agar tiap tier bonus terwakili di data demo.
+            $quantities = [
+                [0, 0, 0],  // tanpa penjualan
+                [1, 1, 0],  // 2 unit  -> bonus 50%
+                [1, 1, 1],  // 3 unit  -> bonus 75%
+                [2, 1, 1],  // 4 unit  -> bonus 100%
+                [0, 1, 2],  // 3 unit  -> bonus 75%
+            ][$index] ?? [0, 0, 0];
+
+            // Dicatat untuk bulan berjalan dan bulan lalu — absensi demo
+            // berada pada 30 hari terakhir, jadi bulan lalu yang memperlihatkan
+            // prorata kehadiran secara utuh.
+            foreach ([$period, $period->subMonth()] as $target) {
+                foreach ($catalog as $position => $product) {
+                    if (($quantities[$position] ?? 0) < 1) {
+                        continue;
+                    }
+
+                    SalesRecord::updateOrCreate(
+                        [
+                            'employee_id' => $mitra->id,
+                            'sales_product_id' => $product->id,
+                            'period_year' => $target->year,
+                            'period_month' => $target->month,
+                        ],
+                        ['quantity' => $quantities[$position]],
+                    );
+                }
+            }
+        }
+
+        // Mitra non-penjualan tetap perlu dasar BPJS karena iurannya kini
+        // ditanggung perusahaan.
+        MitraPayrollSchema::where('schema_type', '!=', 'sales')
+            ->get()
+            ->each(function (MitraPayrollSchema $schema) {
+                $components = $schema->components ?? [];
+                $components['bpjs_wage_base'] = 3_921_000;
+                $schema->update(['components' => $components]);
+            });
     }
 
     /**
@@ -202,18 +312,17 @@ class HrisDemoSeeder extends Seeder
 
     private function seedEmploymentTypes(): void
     {
-        // Kebijakan perusahaan: ketiga entitas berhak cuti tahunan.
-        // Kuota tetap proporsional terhadap durasi kontrak, dan seluruhnya
-        // dapat diubah HR lewat halaman Entitas Kerja.
-        //
-        // Catatan: aturan BPJS tidak ikut berubah — Probation dan Mitra tetap
-        // dikecualikan sesuai Masterplan §1.2.
+        // Kebijakan perusahaan pengguna:
+        //  - ketiga entitas berhak cuti tahunan, kuota proporsional durasi kontrak;
+        //  - ketiga entitas didaftarkan BPJS, dan iurannya ditanggung penuh
+        //    perusahaan (porsi pekerja tidak dipotong dari take home pay).
+        // Semuanya dapat diubah HR lewat halaman Entitas Kerja.
         $definitions = [
-            ['code' => 'PROB3', 'name' => 'Probation 3 Bulan', 'category' => 'probation', 'duration_months' => 3, 'is_leave_eligible' => true, 'is_bpjs_eligible' => false, 'annual_leave_quota' => 3],
+            ['code' => 'PROB3', 'name' => 'Probation 3 Bulan', 'category' => 'probation', 'duration_months' => 3, 'is_leave_eligible' => true, 'is_bpjs_eligible' => true, 'annual_leave_quota' => 3],
             ['code' => 'PKWT3', 'name' => 'PKWT 3 Bulan', 'category' => 'pkwt', 'duration_months' => 3, 'is_leave_eligible' => true, 'is_bpjs_eligible' => true, 'annual_leave_quota' => 3],
             ['code' => 'PKWT6', 'name' => 'PKWT 6 Bulan', 'category' => 'pkwt', 'duration_months' => 6, 'is_leave_eligible' => true, 'is_bpjs_eligible' => true, 'annual_leave_quota' => 6],
             ['code' => 'PKWT12', 'name' => 'PKWT 12 Bulan', 'category' => 'pkwt', 'duration_months' => 12, 'is_leave_eligible' => true, 'is_bpjs_eligible' => true, 'annual_leave_quota' => 12],
-            ['code' => 'MITRA', 'name' => 'Mitra / Freelance', 'category' => 'mitra', 'duration_months' => null, 'is_leave_eligible' => true, 'is_bpjs_eligible' => false, 'annual_leave_quota' => 12],
+            ['code' => 'MITRA', 'name' => 'Mitra / Freelance', 'category' => 'mitra', 'duration_months' => null, 'is_leave_eligible' => true, 'is_bpjs_eligible' => true, 'annual_leave_quota' => 12],
         ];
 
         foreach ($definitions as $definition) {

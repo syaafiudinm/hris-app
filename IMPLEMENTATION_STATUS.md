@@ -32,7 +32,7 @@ Seluruh akun memakai kata sandi **`password`**.
 | `hr@perusahaan.co.id` | Super Admin / HR | Seluruh modul & konfigurasi |
 | `manager@perusahaan.co.id` | Manager / Atasan | Rekap absensi + approval cuti, **dibatasi divisinya** |
 | `karyawan@perusahaan.co.id` | Employee | Portal mandiri (absensi, cuti, slip gaji) |
-| `mitra@perusahaan.co.id` | Mitra | Portal mandiri, tanpa kuota cuti |
+| `mitra@perusahaan.co.id` | Mitra | Portal mandiri, termasuk kuota cuti |
 
 ### Isi data demo
 
@@ -48,7 +48,7 @@ dan 2 lokasi kantor untuk geofence.
 
 #### Core Workforce Database
 
-Empat belas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada `users`:
+Enam belas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada `users`:
 
 | Tabel | Peran |
 | :--- | :--- |
@@ -64,6 +64,7 @@ Empat belas tabel baru mengikuti ERD Masterplan §4, plus satu kolom `role` pada
 | `export_logs` | Audit log ekspor (Masterplan §3) |
 | `announcements`, `knowledge_documents` | Knowledge Center + penargetan audiens |
 | `employee_exits` | Proses offboarding & penerbitan paklaring |
+| `sales_products`, `sales_records` | Katalog produk & unit terjual per mitra per periode |
 | `users.role` | Sumber kebenaran RBAC |
 
 #### RBAC
@@ -113,8 +114,11 @@ File Transfer Bank (CSV) · Rekap Pajak PPh 21/23.
 
 `app/Services/PayrollCalculator.php` + `PayrollRunService.php`:
 
-* Potongan pekerja: BPJS Kes 1% + JHT 2% + JP 1% (JP dibatasi cap upah).
-* Kontribusi perusahaan: Kes 4% + JHT 3,7% + JKM 0,3% + JKK 0,24% + JP 2%.
+* **Iuran BPJS ditanggung penuh perusahaan** (kebijakan perusahaan pengguna):
+  porsi pekerja (Kes 1% + JHT 2% + JP 1%) tidak dipotong dari take home pay,
+  melainkan ikut dibayarkan perusahaan bersama porsi perusahaan
+  (Kes 4% + JHT 3,7% + JKM 0,3% + JKK 0,24% + JP 2%) — total 14,24% dari upah.
+* Ketiga entitas kerja terdaftar BPJS, termasuk Probation dan Mitra.
 * PPh 21 metode **TER PP 58/2023**.
 * Lembur ditarik dari menit kerja di atas 8 jam × 1,5 × tarif per jam.
 * **Enforcement**: bila `is_bpjs_eligible` bernilai false, seluruh variabel BPJS di-set 0.
@@ -131,6 +135,7 @@ Halaman `/skema-mitra`, lima tipe skema:
 | Fixed Project Fee | Dibayar penuh satu kali per periode |
 | Deliverable / Milestone | Persentase pada daftar milestone (JSON) |
 | Unit / Output | Diisi manual HR |
+| **Kompensasi Penjualan** | Unit terjual dari menu Penjualan Mitra + hari hadir dari absensi |
 
 Skema pajak mitra: PPh 21 bukan pegawai (berkesinambungan / tidak), PPh 23, atau bebas pajak.
 
@@ -139,11 +144,13 @@ Skema pajak mitra: PPh 21 bukan pegawai (berkesinambungan / tidak), PPh 23, atau
 `app/Services/LeavePolicyService.php` — penolakan terjadi di **server (403)**, bukan
 sekadar menyembunyikan tombol:
 
-| Entitas | Cuti tahunan | Izin sakit / tanpa gaji |
+Sejak kebijakan terbaru ketiga entitas berhak cuti tahunan (lihat §2.6), sehingga
+penolakan hanya terjadi bila HR menonaktifkan hak cuti suatu entitas:
+
+| Kondisi | Cuti tahunan | Izin sakit / tanpa gaji |
 | :--- | :--- | :--- |
-| Probation | ❌ ditolak 403 | ✅ boleh |
-| PKWT | ✅ sesuai kuota | ✅ boleh |
-| Mitra | ❌ ditolak 403 | ✅ boleh |
+| `is_leave_eligible` = true | ✅ sesuai kuota | ✅ boleh |
+| `is_leave_eligible` = false | ❌ ditolak 403 | ✅ tetap boleh |
 
 Pengajuan melebihi sisa kuota juga ditolak dengan pesan yang menyebut sisa kuota.
 
@@ -151,8 +158,21 @@ Pengajuan melebihi sisa kuota juga ditolak dengan pesan yang menyebut sisa kuota
 
 Dua template terpisah: `documents/payslip.blade.php` (karyawan) dan
 `documents/payment-voucher.blade.php` (mitra, lengkap dengan kolom tanda tangan).
-Slip probation secara eksplisit menuliskan "BPJS tidak berlaku untuk entitas ini"
-agar karyawan paham sebabnya.
+Setiap komponen dirinci agar penerima dapat mencocokkan sendiri angkanya:
+
+* **Slip karyawan** — tiga bagian: Penerimaan (termasuk jam lembur & tarif per jam),
+  Potongan, dan **tabel iuran BPJS per program** (Kesehatan, JHT, JKM, JKK, JP)
+  lengkap dengan persentase serta nominal porsi perusahaan dan porsi pekerja yang
+  ditalangi. Potongan BPJS Rp 0 diberi keterangan sebabnya.
+* **Slip gaji mitra (skema penjualan)** — dasar gaji beserta alasannya (uang makan
+  atau bonus tier), baris uang makan yang dicoret bila digantikan bonus, lalu
+  perhitungan prorata hari hadir langkah demi langkah.
+* **Slip insentif mitra** — satu baris per produk (unit × tarif), dasar dan tarif
+  pajaknya. Sengaja **tanpa blok BPJS** agar iuran tidak terhitung dua kali.
+
+Rincian disimpan pada `payrolls.details` saat payroll dijalankan, sehingga slip
+mencetak angka yang identik dengan hasil perhitungan — bukan menghitung ulang di
+template. Halaman detail payroll di layar menampilkan rincian yang sama.
 
 ---
 
@@ -298,6 +318,36 @@ proses keluar di sini belum menyertakan checklist pengembalian barang.
 
 ---
 
+### 2.8 Skema Kompensasi Penjualan Mitra
+
+Skema keenam untuk Mitra, mengikuti kebijakan perusahaan pengguna. Satu periode
+menerbitkan **dua slip terpisah** (`payrolls.slip_type`):
+
+**Slip `salary`** — dasar gajinya salah satu, bukan dijumlahkan:
+
+| Kondisi | Dasar gaji bulanan |
+| :--- | :--- |
+| Tier belum tercapai | Uang makan & transport Rp 1.000.000 |
+| Tier tercapai | Bonus **menggantikan** uang makan: 2 unit → 50% UMP · 3 → 75% · 4 → 100% |
+
+Nilai itu diprorata `hari hadir ÷ 26 hari kerja`. Tidak dipotong pajak. Iuran BPJS
+perusahaan dibebankan di slip ini saja agar tidak terhitung dua kali.
+
+**Slip `incentive`** — Σ (unit terjual × insentif produk), **tidak diprorata**,
+dipotong pajak 50% × 2,5% (efektif 1,25%). Hanya terbit bila ada penjualan.
+
+Tier tertinggi yang syaratnya terpenuhi yang dipakai; UMP acuan Sulsel Rp 3.921.000.
+
+Katalog produk contoh: EX2 Rp 500.000 · EX5 Rp 2.000.000 · Starray Rp 3.000.000,
+seluruhnya dapat ditambah/diubah HR lewat menu **Penjualan Mitra**. Nilai uang makan,
+hari kerja, UMP acuan, tier bonus, dan tarif pajak diatur **per mitra** pada
+`mitra_payroll_schemas.components` lewat Skema Mitra.
+
+Rincian perhitungan disimpan pada `payrolls.details`, sehingga payment voucher
+mencetak angka yang sama persis dengan saat payroll dijalankan.
+
+---
+
 ## 3. Hasil Verifikasi
 
 Diuji lewat HTTP kernel Laravel, bukan asumsi:
@@ -321,10 +371,11 @@ Geofence      0 m DI DALAM · 400 m di luar · Surabaya di luar
 ### Test otomatis (Pest)
 
 ```
-Tests: 43 passed (136 assertions)
+Tests: 64 passed (221 assertions)
 
 JobVacancyTest         buat lowongan · alur draft/open/closed · proteksi hapus · RBAC
 EmployeeExitTest       alur draft->completed · nomor surat stabil · masa kerja · RBAC
+SalesCompensationTest  bonus menggantikan uang makan · dua slip terpisah · pajak insentif · BPJS
 KnowledgeCenterTest    penargetan audiens · disk privat · RBAC · kebijakan cuti baru
 RecruitmentTest        portal karier · pipeline · konversi hired
 RecruitmentGuardTest   regresi ATS:
@@ -350,7 +401,7 @@ Query per halaman setelah perbaikan N+1: `/rekrutmen` 27 → 18, `/karier` 10 �
 | **PPh 21 TER disederhanakan** | Baru memakai bracket TER A umum; belum membedakan TER B/C per status PTKP. Perlu tabel lengkap + field PTKP sebelum produksi. |
 | **Ekspor masih sinkron** | Aman pada volume saat ini, tapi Tips §7.2 menyarankan background job queue untuk ribuan baris. |
 | **Kuantitas mitra unit/milestone manual** | Belum ada UI input kuantitas per periode; sementara dihitung 1× penuh. |
-| **Cakupan tes masih parsial** | 43 test menutup ATS, Knowledge Center, dan Exit/Paklaring. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
+| **Cakupan tes masih parsial** | 64 test menutup ATS, Knowledge Center, Exit/Paklaring, dan skema penjualan. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
 | **Kanban belum drag-and-drop** | Perpindahan tahap lewat tombol/select, bukan seret-lepas. Fungsional, tapi belum senyaman papan kanban penuh. |
 | **Belum ada notification engine** | Peringatan kontrak H-30/H-14 baru tampil di dashboard, belum dikirim via email/WhatsApp. |
 | **Lamaran publik belum di-rate-limit** | Honeypot sudah ada, tapi belum ada throttle per IP pada `/karier/{id}/apply`. |
@@ -387,7 +438,7 @@ Bagian Masterplan §2.1 yang tidak masuk daftar Fase 1:
 
 | Prioritas | Pekerjaan |
 | :--- | :--- |
-| **Tinggi** | Test Pest untuk mesin payroll (BPJS, PPh 21 TER, lembur) — bagian ini masih diverifikasi manual |
+| **Tinggi** | Test Pest untuk PPh 21 TER dan perhitungan lembur — bagian payroll yang belum tertutup |
 | **Tinggi** | Tabel PPh 21 TER lengkap (A/B/C) + field status PTKP pada `employees` |
 | **Tinggi** | `composer update` untuk menutup advisory dependensi |
 | Sedang | Pindahkan ekspor besar ke queue + notifikasi berkas siap unduh |
@@ -408,6 +459,7 @@ app/
 │   ├── AttendanceController.php          # rekap, self-service, clock in/out, 3 ekspor
 │   ├── CareerController.php              # portal karier publik + form lamaran
 │   ├── ExitController.php                # offboarding + paklaring
+│   ├── SalesController.php               # katalog produk + input unit terjual
 │   ├── JobVacancyController.php          # CRUD lowongan + alur publikasi
 │   ├── KnowledgeController.php           # pengumuman + dokumen + unduh privat
 │   ├── RecruitmentController.php         # pipeline, konversi, PDF, unduh CV, 3 ekspor
@@ -436,7 +488,7 @@ resources/
 │   ├── Pages/                            # Auth, Employees, Attendance, Payroll,
 │   │                                     # Leaves, MitraSchemas, EmploymentTypes,
 │   │                                     # Career (publik), Recruitment, Vacancies,
-│   │                                     # Knowledge (baca + kelola), Exits
+│   │                                     # Knowledge (baca + kelola), Exits, Sales
 │   └── lib/format.ts                     # format rupiah & angka id-ID
 └── views/
     ├── documents/payslip.blade.php
@@ -449,6 +501,7 @@ resources/
 tests/Feature/
 ├── EmployeeExitTest.php                  # offboarding & paklaring
 ├── JobVacancyTest.php                    # manajemen lowongan
+├── SalesCompensationTest.php             # skema penjualan mitra & BPJS
 ├── KnowledgeCenterTest.php               # audiens, disk privat, kebijakan cuti
 ├── RecruitmentTest.php                   # alur utama ATS
 └── RecruitmentGuardTest.php              # regresi bug ATS
@@ -456,4 +509,4 @@ tests/Feature/
 
 ---
 
-*Diperbarui 2 Agustus 2026 — Modul 1–5 aktif; menyisakan Manajemen Aset & Clearance Sheet.*
+*Diperbarui 3 Agustus 2026 — Modul 1–5 aktif plus skema kompensasi penjualan mitra; menyisakan Manajemen Aset & Clearance Sheet.*

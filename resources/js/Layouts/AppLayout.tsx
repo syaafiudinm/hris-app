@@ -89,6 +89,12 @@ const navigation: NavGroup[] = [
                 roles: ["super_admin"],
             },
             {
+                label: "Penjualan Mitra",
+                href: "/penjualan",
+                icon: IconFunnel,
+                roles: ["super_admin"],
+            },
+            {
                 label: "Lowongan",
                 href: "/lowongan",
                 icon: IconFunnel,
@@ -155,12 +161,14 @@ export default function AppLayout({
 
     return (
         <div className="min-h-screen bg-plane">
+            {/* Kolom flex: logo dan kartu profil tetap di tempat, hanya
+                daftar menu yang menggulir. */}
             <aside
-                className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-hairline bg-surface transition-transform lg:translate-x-0 ${
+                className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-hairline bg-surface transition-transform lg:translate-x-0 ${
                     navOpen ? "translate-x-0" : "-translate-x-full"
                 }`}
             >
-                <div className="flex h-16 items-center gap-2.5 px-5">
+                <div className="flex h-16 shrink-0 items-center gap-2.5 px-5">
                     <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-500 text-sm font-semibold text-white">
                         H
                     </span>
@@ -174,7 +182,7 @@ export default function AppLayout({
                     </div>
                 </div>
 
-                <nav className="px-3 pb-32">
+                <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
                     {visibleGroups.map((group) => (
                         <div key={group.heading} className="mb-3">
                             <p className="px-2 pb-1.5 text-[11px] font-medium tracking-wider text-ink-muted uppercase">
@@ -226,20 +234,26 @@ export default function AppLayout({
                     ))}
                 </nav>
 
-                <div className="absolute inset-x-3 bottom-4 rounded-xl bg-surface-soft px-4 py-3">
-                    <p className="truncate text-xs font-medium text-ink">
-                        {auth?.user?.name ?? "Tamu"}
-                    </p>
-                    <p className="text-[11px] text-ink-muted">
-                        {auth?.user ? ROLE_LABELS[auth.user.role] : "-"}
-                    </p>
-                    <button
-                        type="button"
-                        onClick={() => router.post("/logout")}
-                        className="mt-2 text-[11px] font-medium text-brand-600 transition hover:text-brand-700"
-                    >
-                        Keluar
-                    </button>
+                {/* Garis pemisah menandai batas gulir menu di atasnya. */}
+                <div className="shrink-0 border-t border-hairline p-3">
+                    <div className="flex items-center gap-3 rounded-xl bg-surface-soft px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-medium text-ink">
+                                {auth?.user?.name ?? "Tamu"}
+                            </p>
+                            <p className="truncate text-[11px] text-ink-muted">
+                                {auth?.user ? ROLE_LABELS[auth.user.role] : "-"}
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => router.post("/logout")}
+                            title="Keluar"
+                            className="shrink-0 rounded-lg px-2 py-1.5 text-[11px] font-medium text-brand-600 transition hover:bg-brand-50 hover:text-brand-700"
+                        >
+                            Keluar
+                        </button>
+                    </div>
                 </div>
             </aside>
 

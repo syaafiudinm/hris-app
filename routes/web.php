@@ -13,6 +13,7 @@ use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MitraPayrollSchemaController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\RecruitmentController;
+use App\Http\Controllers\SalesController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -164,6 +165,31 @@ Route::middleware("auth")->group(function () {
             MitraPayrollSchemaController::class,
             "destroy",
         ])->name("mitra-schemas.destroy");
+
+        /*
+         |------------------------------------------------------------------
+         | Penjualan Mitra — sumber insentif & bonus skema sales
+         |------------------------------------------------------------------
+         */
+        Route::get("/penjualan", [SalesController::class, "index"])->name(
+            "sales.index",
+        );
+        Route::post("/penjualan/{employee}", [
+            SalesController::class,
+            "store",
+        ])->name("sales.store");
+        Route::post("/penjualan-produk", [
+            SalesController::class,
+            "storeProduct",
+        ])->name("sales.product.store");
+        Route::patch("/penjualan-produk/{product}", [
+            SalesController::class,
+            "updateProduct",
+        ])->name("sales.product.update");
+        Route::delete("/penjualan-produk/{product}", [
+            SalesController::class,
+            "destroyProduct",
+        ])->name("sales.product.destroy");
 
         /*
          |------------------------------------------------------------------
@@ -353,6 +379,10 @@ Route::middleware("auth")->group(function () {
                     ExitController::class,
                     "export",
                 ])->name("exits");
+                Route::get("/penjualan", [
+                    SalesController::class,
+                    "export",
+                ])->name("sales");
             });
         });
 });

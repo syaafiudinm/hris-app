@@ -12,6 +12,7 @@ class Payroll extends Model
         'period_year',
         'period_month',
         'payout_type',
+        'slip_type',
         'basic_amount',
         'allowance_amount',
         'overtime_amount',
@@ -22,6 +23,7 @@ class Payroll extends Model
         'other_deduction',
         'net_payout',
         'status',
+        'details',
     ];
 
     protected function casts(): array
@@ -36,6 +38,7 @@ class Payroll extends Model
             'pph_deduction' => 'decimal:2',
             'other_deduction' => 'decimal:2',
             'net_payout' => 'decimal:2',
+            'details' => 'array',
         ];
     }
 

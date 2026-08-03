@@ -16,7 +16,7 @@ use Inertia\Response;
  */
 class MitraPayrollSchemaController extends Controller
 {
-    public const SCHEMA_TYPES = ['fixed_project', 'hourly', 'daily', 'milestone', 'unit'];
+    public const SCHEMA_TYPES = ['fixed_project', 'hourly', 'daily', 'milestone', 'unit', 'sales'];
 
     public const TAX_SCHEMES = [
         'pph21_berkesinambungan',
@@ -109,13 +109,30 @@ class MitraPayrollSchemaController extends Controller
             'milestones' => ['nullable', 'array'],
             'milestones.*.name' => ['required_with:milestones', 'string', 'max:100'],
             'milestones.*.percentage' => ['required_with:milestones', 'numeric', 'min:0', 'max:100'],
+            // Konfigurasi skema penjualan
+            'monthly_allowance' => ['nullable', 'numeric', 'min:0'],
+            'working_days' => ['nullable', 'integer', 'min:1', 'max:31'],
+            'ump_reference' => ['nullable', 'numeric', 'min:0'],
+            'incentive_tax_base_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'incentive_tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'bpjs_wage_base' => ['nullable', 'numeric', 'min:0'],
+            'bonus_tiers' => ['nullable', 'array'],
+            'bonus_tiers.*.units' => ['required_with:bonus_tiers', 'integer', 'min:1'],
+            'bonus_tiers.*.percentage' => ['required_with:bonus_tiers', 'numeric', 'min:0', 'max:1000'],
         ]);
 
         // Komponen fleksibel disimpan sebagai JSON agar tidak perlu migrasi
-        // saat kebijakan bonus/milestone berubah.
+        // saat kebijakan bonus/milestone/penjualan berubah.
         $components = array_filter([
             'transport_allowance' => $data['transport_allowance'] ?? null,
             'milestones' => $data['milestones'] ?? null,
+            'monthly_allowance' => $data['monthly_allowance'] ?? null,
+            'working_days' => $data['working_days'] ?? null,
+            'ump_reference' => $data['ump_reference'] ?? null,
+            'incentive_tax_base_percentage' => $data['incentive_tax_base_percentage'] ?? null,
+            'incentive_tax_rate' => $data['incentive_tax_rate'] ?? null,
+            'bpjs_wage_base' => $data['bpjs_wage_base'] ?? null,
+            'bonus_tiers' => $data['bonus_tiers'] ?? null,
         ], fn ($value) => $value !== null);
 
         return [
