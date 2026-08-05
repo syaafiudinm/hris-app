@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import FlashMessages from "@/Components/FlashMessages";
 import {
     IconBook,
+    IconBox,
     IconClock,
     IconFunnel,
     IconGrid,
@@ -37,6 +38,11 @@ const navigation: NavGroup[] = [
             { label: "Cuti & Izin Saya", href: "/cuti-saya", icon: IconBook },
             { label: "Slip Gaji Saya", href: "/slip-gaji-saya", icon: IconWallet },
             {
+                label: "Pinjam Inventaris",
+                href: "/inventaris-saya",
+                icon: IconBox,
+            },
+            {
                 label: "Knowledge Center",
                 href: "/knowledge",
                 icon: IconBook,
@@ -56,6 +62,12 @@ const navigation: NavGroup[] = [
                 label: "Entitas Kerja",
                 href: "/entitas-kerja",
                 icon: IconGrid,
+                roles: ["super_admin"],
+            },
+            {
+                label: "Inventaris",
+                href: "/inventaris",
+                icon: IconBox,
                 roles: ["super_admin"],
             },
             {

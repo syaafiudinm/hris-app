@@ -76,6 +76,17 @@ class Employee extends Model
         return $this->hasMany(Payroll::class);
     }
 
+    public function inventoryLoans(): HasMany
+    {
+        return $this->hasMany(InventoryLoan::class);
+    }
+
+    /** Pinjaman yang belum tuntas — penghambat clearance saat exit. */
+    public function openInventoryLoans(): HasMany
+    {
+        return $this->inventoryLoans()->whereIn('status', InventoryLoan::OPEN_STATUSES);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');

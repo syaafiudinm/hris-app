@@ -36,6 +36,8 @@ type ExitRow = {
     status: string;
     paklaringNumber: string | null;
     paklaringIssuedAt: string | null;
+    /** Pinjaman inventaris yang belum tuntas — penghambat clearance. */
+    openLoans: number;
 };
 
 type EligibleEmployee = {
@@ -256,6 +258,17 @@ export default function ExitsIndex({ exits, filters, options, stats }: Props) {
                                                     {exit.reason}
                                                 </p>
                                             )}
+
+                                            {exit.openLoans > 0 &&
+                                                exit.status === "draft" && (
+                                                    <p className="mt-2 flex items-center gap-1.5 text-xs text-[#b53232]">
+                                                        <IconAlert className="h-3.5 w-3.5" />
+                                                        Clearance tertahan:{" "}
+                                                        {exit.openLoans}{" "}
+                                                        peminjaman inventaris
+                                                        belum dikembalikan.
+                                                    </p>
+                                                )}
 
                                             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-hairline pt-3">
                                                 <Button

@@ -24,7 +24,11 @@ class ExitController extends Controller
 
     public function index(Request $request): Response
     {
-        $exits = EmployeeExit::with(['employee.department', 'employee.employmentType'])
+        $exits = EmployeeExit::with([
+            'employee.department',
+            'employee.employmentType',
+            'employee' => fn ($query) => $query->withCount('openInventoryLoans as open_loans_count'),
+        ])
             ->when($request->string('status')->toString(), fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($request->string('exit_type')->toString(), fn (Builder $query, string $type) => $query->where('exit_type', $type))
             ->when($request->string('search')->toString(), fn (Builder $query, string $search) => $query->whereHas(
@@ -110,6 +114,17 @@ class ExitController extends Controller
         ]);
 
         if ($data['status'] === 'completed') {
+            // Clearance: aset perusahaan harus tuntas sebelum paklaring terbit.
+            $outstanding = $exit->employee?->openInventoryLoans()->with('item')->get() ?? collect();
+
+            if ($outstanding->isNotEmpty()) {
+                return back()->with('error', sprintf(
+                    'Masih ada %d peminjaman inventaris yang belum tuntas (%s). Selesaikan pengembaliannya lebih dulu.',
+                    $outstanding->count(),
+                    $outstanding->map(fn ($loan) => $loan->item?->name)->filter()->implode(', '),
+                ));
+            }
+
             $this->exits->complete($exit);
 
             return back()->with(
@@ -245,6 +260,9 @@ class ExitController extends Controller
             'status' => $exit->status,
             'paklaringNumber' => $exit->paklaring_number,
             'paklaringIssuedAt' => $exit->paklaring_issued_at?->translatedFormat('d M Y'),
+            // Penghambat clearance — ditampilkan agar HR tahu sebelum menekan
+            // tombol tuntaskan.
+            'openLoans' => (int) ($exit->employee?->open_loans_count ?? 0),
         ];
     }
 }

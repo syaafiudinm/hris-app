@@ -74,18 +74,48 @@ berarti peran Anda memang tidak memiliki akses ke sana.
 
 Menu **Portal Saya → Absensi Saya**.
 
-**Clock in** memerlukan dua hal: titik GPS di dalam radius kantor, dan foto selfie.
+Clock in menyediakan **dua opsi**. Pilih salah satu kartu di bagian atas kotak
+*Clock in*; kedua opsi sama-sama merekam titik GPS Anda.
+
+#### Opsi 1 — Kamera langsung (baku)
+
+Untuk absen normal dari kantor.
 
 1. Klik **Ambil lokasi**. Izinkan akses lokasi saat browser meminta.
    Sistem menampilkan jarak Anda ke kantor terdekat:
    * Hijau bertanda centang = di dalam radius, boleh lanjut.
-   * Merah = di luar radius; clock in akan ditolak.
+   * Merah = di luar radius; clock in **ditolak**.
 2. Klik **Nyalakan kamera**, lalu **Ambil foto**. Bila hasilnya kurang baik, klik
    **Ulangi foto**.
 3. Klik **Kirim clock in**.
 
-Tombol **Kirim clock in** baru aktif setelah lokasi valid *dan* foto sudah diambil.
-Jika masih nonaktif, tulisan di bawahnya menjelaskan apa yang kurang.
+Absensi ini **langsung sah** — tidak perlu persetujuan siapa pun.
+
+#### Opsi 2 — Unggah foto
+
+Untuk dua keadaan: Anda bekerja di lapangan (di luar radius kantor), atau kamera
+browser tidak dapat dipakai (perangkat menolak izin, akses lewat HTTP biasa,
+kamera dipakai aplikasi lain).
+
+1. Klik **Ambil lokasi** seperti biasa. Bedanya, berada di luar radius **tidak
+   memblokir** — jaraknya hanya dicatat.
+2. Klik **Pilih foto** dan pilih berkas dari perangkat (JPG/PNG, maksimal 5 MB).
+3. Isi **alasan** — wajib. Contoh: "Kunjungan klien di Gowa" atau "Kamera ponsel
+   tidak bisa dibuka". Alasan ini yang dibaca HR saat memverifikasi.
+4. Klik **Kirim untuk verifikasi**.
+
+Absensi tercatat hari itu juga, tetapi berstatus **Menunggu verifikasi HR**.
+Hasil keputusan muncul di kartu status Anda:
+
+| Keputusan HR | Akibatnya |
+| --- | --- |
+| Disetujui | Hari itu dihitung sebagai kehadiran seperti biasa. |
+| Ditolak | Hari itu berubah menjadi **tidak hadir** dan tidak dibayar. Catatan HR ditampilkan. |
+
+> Foto absensi disimpan di penyimpanan privat. Hanya Anda sendiri, HR, dan
+> manager divisi Anda yang dapat membukanya.
+
+#### Clock out dan jam kerja
 
 **Clock out**: tombol **Clock out** muncul di kanan atas setelah Anda clock in.
 Jam kerja dihitung otomatis dari selisih clock in dan clock out.
@@ -151,6 +181,36 @@ dokumen (SOP, Peraturan Perusahaan, Panduan, Formulir), lalu klik tautan unduh.
 > ditujukan untuk divisi atau entitas kerja tertentu, jadi daftar yang Anda lihat bisa
 > berbeda dari rekan lain — itu normal, bukan kesalahan sistem.
 
+### 3.5 Pinjam Inventaris
+
+Menu **Portal Saya → Pinjam Inventaris**.
+
+Halaman ini dipakai untuk meminjam aset perusahaan — laptop, proyektor, kendaraan
+operasional, dan sebagainya.
+
+**Mengajukan pinjaman**
+
+1. Pilih **Aset**. Angka dalam kurung menunjukkan berapa unit yang masih tersedia.
+2. Isi **Jumlah** dan **Rencana kembali**.
+3. Tulis **Keperluan** sejelas mungkin — ini yang dinilai HR.
+4. Klik **Kirim pengajuan**.
+
+**Alur status**
+
+| Status | Artinya |
+| --- | --- |
+| Menunggu persetujuan | Pengajuan terkirim, HR belum memutuskan. Masih bisa Anda batalkan. |
+| Disetujui | Unit sudah dikunci untuk Anda, tapi barang belum berpindah tangan. |
+| Sedang dipinjam | Barang sudah diserahkan. Kembalikan sebelum jatuh tempo. |
+| Sudah dikembalikan | Selesai. |
+| Ditolak | HR menolak; alasannya tertera di bawah pengajuan. |
+
+Pinjaman yang lewat jatuh tempo diberi tanda merah **telat N hari**, baik di
+halaman Anda maupun di konsol HR.
+
+> **Penting saat resign:** pinjaman yang belum tuntas **menahan proses clearance**.
+> Paklaring tidak dapat diterbitkan sebelum seluruh aset dikembalikan.
+
 ---
 
 ## 4. Panduan Manager / Atasan
@@ -162,16 +222,37 @@ terbatas pada divisi Anda** — Anda tidak akan melihat data divisi lain.
 
 Menu **Manajemen → Rekap Absensi**.
 
-Empat kartu di atas meringkas periode terpilih: hadir tepat waktu, terlambat, tanpa
-keterangan, dan jumlah absensi yang ditandai *fake GPS*.
+Lima kartu di atas meringkas periode terpilih: hadir tepat waktu, terlambat, tanpa
+keterangan, jumlah absensi yang ditandai *fake GPS*, dan jumlah absensi mode unggah
+yang **menunggu verifikasi**.
 
-Filter tersedia di satu baris: rentang tanggal, nama/NIK, divisi, entitas, dan status.
-Centang **Tampilkan hanya yang ditandai fake GPS** untuk menyaring absensi yang perlu
-diverifikasi.
+Filter tersedia di satu baris: rentang tanggal, nama/NIK, divisi, entitas, status,
+metode absen, dan status verifikasi. Centang **Tampilkan hanya yang ditandai fake GPS**
+untuk menyaring absensi yang perlu ditelusuri.
 
 > **Tentang tanda fake GPS:** absensi yang mencurigakan **tetap tercatat**, hanya
 > diberi tanda merah agar dapat Anda konfirmasi ke karyawan bersangkutan. Sistem tidak
 > menolaknya diam-diam supaya jejaknya tetap bisa ditelusuri.
+
+#### Memverifikasi absensi mode unggah
+
+Kolom **Metode & verifikasi** memperlihatkan cara karyawan absen. Baris bertanda
+*Unggah foto* dan *Menunggu verifikasi HR* menampilkan:
+
+* alasan yang ditulis karyawan (dalam tanda kutip),
+* jaraknya dari kantor bila ia berada di luar radius,
+* tautan **Lihat foto** untuk membuka foto yang diunggah,
+* tombol **Setujui** dan **Tolak**.
+
+Cara tercepat menemukannya: pilih **Menunggu verifikasi HR** pada filter verifikasi.
+
+| Tombol | Akibatnya |
+| --- | --- |
+| Setujui | Hari itu dihitung sebagai kehadiran (present/late sesuai jam masuk). |
+| Tolak | Hari itu diubah menjadi **absent**, jam kerja dan keterlambatan dinolkan, sehingga payroll otomatis tidak membayarnya. Alasan penolakan wajib diisi. |
+
+> Absensi mode kamera langsung berstatus *Terverifikasi otomatis* dan tidak
+> memerlukan — dan tidak menerima — keputusan Anda.
 
 ### 4.2 Approval Cuti
 
@@ -388,7 +469,16 @@ aktif dan belum punya catatan keluar), lalu isi:
 
 Pada tahap ini karyawan **masih berstatus aktif** dan datanya masih bisa diperbaiki.
 
-**Tahap 2 — Tuntaskan.** Klik **Tuntaskan & terbitkan**. Sistem otomatis:
+**Tahap 2 — Tuntaskan.** Klik **Tuntaskan & terbitkan**.
+
+Sebelum apa pun terjadi, sistem menjalankan **pengecekan clearance**: bila karyawan
+masih memiliki peminjaman inventaris yang belum tuntas, proses **ditolak** dan nama
+asetnya disebutkan. Kartu draft juga menampilkan peringatan merah *"Clearance
+tertahan: N peminjaman inventaris belum dikembalikan"* sejak awal, sehingga Anda tahu
+sebelum menekan tombolnya. Selesaikan pengembaliannya di menu **Inventaris**, lalu
+ulangi.
+
+Bila clearance bersih, sistem otomatis:
 
 * mengubah status karyawan menjadi `resigned` (resign/PHK/pensiun) atau `expired`
   (kontrak berakhir);
@@ -443,6 +533,67 @@ berguna untuk menilai SOP mana yang benar-benar dibaca.
 Gunakan tombol **Lihat sebagai pembaca** untuk memastikan hasilnya tampil sebagaimana
 mestinya.
 
+### 5.10 Inventaris & Peminjaman
+
+Menu **Manajemen → Inventaris**. Satu halaman berisi dua hal: katalog aset dan
+seluruh peminjaman.
+
+**Empat kartu ringkasan:** jenis aset & total unit, unit yang sedang dipinjam,
+pengajuan yang menunggu keputusan, dan pinjaman yang lewat jatuh tempo.
+
+#### Mengelola katalog aset
+
+Klik **Tambah aset**, lalu isi panel di kanan:
+
+* **Kode aset** — wajib dan unik, mis. `AST-LP-001`.
+* **Jumlah unit** — untuk barang serial (laptop, kendaraan) isi 1; untuk barang
+  generik (kursi lipat, modem) isi jumlah sebenarnya. Sistem menghitung sendiri
+  berapa yang masih tersedia.
+* **Kondisi** — Baik / Rusak ringan / Rusak berat.
+* **Status** — Aktif (boleh dipinjam), Perbaikan, atau Dihapus.
+* Merek, nomor seri, lokasi penyimpanan, harga & tanggal perolehan, catatan.
+
+Tabel **Katalog aset** menampilkan kolom *Tersedia* dalam bentuk `tersedia / total`.
+Tombol **Ubah** dan **Hapus** ada di ujung kanan tiap baris.
+
+Dua pagar pengaman: aset yang masih memiliki pinjaman berjalan **tidak dapat dihapus**,
+dan jumlah unitnya **tidak dapat diturunkan** di bawah jumlah yang sedang dipinjam.
+
+#### Memproses peminjaman
+
+Daftar **Peminjaman** menaruh pengajuan yang menunggu keputusan di paling atas.
+Tombol yang muncul mengikuti status saat ini — alur tidak bisa dilompati:
+
+| Status sekarang | Tombol yang tersedia |
+| --- | --- |
+| Menunggu persetujuan | **Setujui**, **Tolak** |
+| Disetujui | **Serahkan barang**, **Tolak** |
+| Sedang dipinjam | **Catat pengembalian**, **Tandai hilang** |
+| Selesai / ditolak / hilang | — (riwayat, tidak bisa diubah) |
+
+Menekan salah satu tombol membuka panel kecil untuk catatan; **Serahkan barang** dan
+**Catat pengembalian** juga meminta **kondisi barang**.
+
+Yang dilakukan sistem di balik layar:
+
+* **Setujui** mengunci unitnya. Bila stok ternyata sudah habis diambil pengajuan lain,
+  persetujuan ditolak dengan pesan sisa stok — jadi satu unit tidak pernah dijanjikan
+  ke dua orang.
+* **Catat pengembalian** melepas unit kembali ke stok. Bila kondisinya lebih buruk dari
+  catatan aset, kondisi master ikut turun; kondisi *Rusak berat* otomatis memindahkan
+  aset ke status **Perbaikan**.
+* **Tandai hilang** mengurangi jumlah unit secara permanen. Bila habis, aset menjadi
+  **Dihapus**.
+
+**Mencatat pinjaman atas nama pegawai:** klik **Catat pinjaman** di kanan atas — isian
+ini langsung berstatus disetujui, dipakai saat serah terima terjadi di luar sistem.
+
+Filter status memiliki pilihan tambahan **Lewat jatuh tempo** untuk menagih
+pengembalian.
+
+Ekspor tersedia lewat tombol **Export Data** (Excel/CSV/PDF), berisi seluruh riwayat
+peminjaman beserta kolom keterlambatan.
+
 ---
 
 ## 6. Portal Karier — untuk pelamar
@@ -481,6 +632,29 @@ audit log beserta pengunduh, waktu, dan filternya.
 ---
 
 ## 8. Pertanyaan yang sering muncul
+
+**Kamera saya tidak bisa dinyalakan, bagaimana cara absen?**
+Pakai opsi **Unggah foto** pada halaman Absensi Saya. Ambil foto dengan aplikasi kamera
+biasa, unggah berkasnya, dan tulis alasannya. Absensi tetap tercatat, hanya perlu
+disetujui HR lebih dulu.
+
+**Saya kerja di lapangan, jauh dari kantor. Apakah bisa absen?**
+Bisa, lewat opsi **Unggah foto**. Opsi ini tidak memblokir Anda karena berada di luar
+radius — jaraknya hanya dicatat dan ditampilkan kepada HR saat memverifikasi. Opsi
+kamera langsung tetap menolak absensi dari luar radius.
+
+**Absensi unggahan saya ditolak HR. Apa akibatnya?**
+Hari itu berubah menjadi *tidak hadir*, sehingga tidak dihitung sebagai hari kerja
+maupun dibayar. Alasan penolakan HR ditampilkan pada kartu status Anda.
+
+**Kenapa saya tidak bisa diproses keluar padahal sudah resign?**
+Kemungkinan besar masih ada aset perusahaan yang belum Anda kembalikan. Cek halaman
+**Pinjam Inventaris**; selama masih ada pinjaman berjalan, paklaring tidak dapat terbit.
+
+**Pengajuan pinjaman saya sudah disetujui, tapi barangnya belum ada.**
+Status *Disetujui* berarti unitnya sudah dikunci untuk Anda tetapi serah terima fisik
+belum dilakukan. Status berubah menjadi *Sedang dipinjam* setelah HR mencatat serah
+terimanya.
 
 **Sebagai Probation/Mitra, apakah saya benar punya cuti tahunan?**
 Ya. Sejak kebijakan terbaru ketiga entitas memiliki kuota — Probation 3 hari, PKWT

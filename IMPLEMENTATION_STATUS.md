@@ -5,8 +5,8 @@ Berisi apa yang **sudah jadi**, cara menjalankannya, dan **rencana tahap berikut
 
 | | |
 | :--- | :--- |
-| **Tanggal** | 1 Agustus 2026 |
-| **Progres roadmap** | Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ (ATS + Knowledge Center) |
+| **Tanggal** | 6 Agustus 2026 |
+| **Progres roadmap** | Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ (ATS + Knowledge Center) · Modul 1 lengkap (Exit, Inventaris & Clearance, Absensi 2 opsi) |
 | **Stack terpasang** | Laravel 12 (PHP 8.4) · Inertia 2 · React 19 · TypeScript · Tailwind 4 · MySQL |
 | **Database** | `hris-db` |
 
@@ -83,8 +83,10 @@ yang di-hardcode di controller.
 
 `app/Services/AttendanceService.php`:
 
-* **Geofencing** — jarak haversine ke kantor terdekat, ditolak bila di luar radius.
-* **Foto selfie** — diambil lewat `getUserMedia`, disimpan ke `storage/app/public/attendance`.
+* **Geofencing** — jarak haversine ke kantor terdekat, ditolak bila di luar radius
+  (berlaku pada mode kamera langsung; lihat §2.9 untuk mode unggah).
+* **Foto selfie** — diambil lewat `getUserMedia`, disimpan ke disk **privat**
+  `storage/app/private/attendance` dan dibuka lewat route ber-RBAC.
 * **Anti-fake GPS**, empat heuristik:
   1. perangkat melaporkan mock location provider;
   2. akurasi mustahil (< 1 meter);
@@ -346,6 +348,99 @@ hari kerja, UMP acuan, tier bonus, dan tarif pajak diatur **per mitra** pada
 Rincian perhitungan disimpan pada `payrolls.details`, sehingga payment voucher
 mencetak angka yang sama persis dengan saat payroll dijalankan.
 
+### 2.9 Absensi Dua Opsi (Modul 1)
+
+Logika clock-in kini bercabang lewat kolom baru `attendances.clock_in_method`.
+
+| | `live` — kamera langsung | `upload` — unggah foto |
+| :--- | :--- | :--- |
+| Sumber foto | `getUserMedia` → data URL base64 | berkas dari perangkat (`image`, maks 5 MB) |
+| Geolokasi | wajib | wajib |
+| Di luar radius | **ditolak** (`ValidationException`) | diterima, jaraknya dicatat |
+| Alasan | tidak diminta | **wajib** diisi |
+| Status verifikasi | `auto` — langsung sah | `pending` — menunggu HR |
+
+Alasan opsi kedua ada: kamera browser tidak selalu tersedia (izin ditolak, akses
+lewat HTTP biasa yang memblokir `getUserMedia`), dan pekerja lapangan memang
+beroperasi di luar radius kantor. Karena foto unggahan tidak dapat dipastikan diambil
+saat itu juga, konsekuensinya adalah verifikasi manual — bukan penerimaan buta.
+
+**Kolom baru:** `clock_in_method`, `clock_in_distance`, `clock_in_office`,
+`is_outside_radius`, `clock_in_note`, `verification_status`, `verified_by`,
+`verified_at`, `verification_note`.
+
+**Keputusan HR** (`AttendanceService::verify`):
+
+* **Disetujui** → status dihitung ulang dari jam clock-in (`present`/`late`).
+* **Ditolak** → status diubah menjadi `absent`, `late_minutes` dan `work_minutes`
+  dinolkan. Dipilih begitu supaya seluruh rekap, timesheet, dan payroll — yang semuanya
+  menyaring `status IN ('present','late')` — otomatis berhenti mengakui hari itu, tanpa
+  perlu menambah filter verifikasi di setiap query.
+
+**Foto pindah ke disk privat.** `AttendanceService::PHOTO_DISK = 'local'`, dibuka lewat
+route `/absensi/{attendance}/foto` yang mengecek izin per record: pemiliknya sendiri,
+super admin, atau manager divisi yang sama. Pola yang sama dipakai CV pelamar dan
+dokumen Knowledge Center.
+
+Rekap absensi HR mendapat filter metode & verifikasi, kartu *Menunggu verifikasi*,
+kolom **Metode & verifikasi** berisi alasan karyawan + jarak + tautan foto, dan tombol
+Setujui/Tolak. Tiga kolom baru ikut pada ekspor absensi.
+
+> **Catatan kebijakan:** absensi `pending` yang belum sempat diverifikasi **masih
+> dihitung hadir** oleh payroll. Yang menghapusnya dari perhitungan hanyalah penolakan
+> eksplisit. Bila kebijakan perusahaan menghendaki sebaliknya, ubah filter di
+> `PayrollRunService` — bukan di controller.
+
+---
+
+### 2.10 Manajemen Peminjaman Inventaris (Modul 1)
+
+Dua tabel baru: `inventory_items` (katalog aset) dan `inventory_loans` (siklus pinjam).
+
+Aset menyimpan `quantity` sebagai total unit — barang serial cukup diisi 1, barang
+generik diisi jumlah sebenarnya. Ketersediaan **tidak disimpan**, melainkan dihitung
+`quantity − Σ kuantitas pinjaman berstatus approved/borrowed`, sehingga tidak ada
+kolom yang bisa melenceng dari kenyataan.
+
+**Mesin status** ada seluruhnya di `InventoryService::TRANSITIONS`:
+
+```
+requested → approved | rejected
+approved  → borrowed | rejected
+borrowed  → returned | lost
+returned / rejected / lost → (final)
+```
+
+Transisi di luar peta ini ditolak dengan `ValidationException`, jadi UI tidak bisa
+melompati alur. Tombol yang tampil di layar dibangkitkan dari peta yang sama —
+`presentLoan()` mengirim daftar transisi yang sah sebagai `actions`.
+
+**Efek samping tiap transisi:**
+
+* `approve` — mengunci stok di dalam `DB::transaction` + `lockForUpdate`, jadi dua
+  persetujuan bersamaan tidak dapat mem-booking unit yang sama dua kali. Bila stok
+  kurang, persetujuan gagal dengan pesan sisa unit.
+* `returnItem` — melepas stok; kondisi yang lebih buruk menurunkan kondisi master
+  aset, dan `damaged` memindahkannya ke status `maintenance`.
+* `markLost` — mengurangi `quantity` permanen; habis berarti aset `retired`.
+
+**Portal mandiri** `/inventaris-saya`: pegawai mengajukan, memantau, dan membatalkan
+pengajuan miliknya sendiri (dicek `employee_id`, bukan sekadar disembunyikan di UI).
+Pengajuan **belum** menahan stok — penguncian baru terjadi saat HR menyetujui.
+
+**Konsol HR** `/inventaris` (super admin): CRUD katalog, antrean pengajuan, filter
+*Lewat jatuh tempo*, pencatatan pinjaman atas nama pegawai (langsung disetujui), dan
+ekspor riwayat.
+
+**Pagar pengaman:** aset dengan pinjaman berjalan tidak dapat dihapus, dan `quantity`
+tidak dapat diturunkan di bawah jumlah yang sedang dipinjam.
+
+**Integrasi clearance.** `ExitController::updateStatus` menolak penuntasan proses keluar
+selama karyawan masih punya pinjaman berstatus requested/approved/borrowed, dan
+menyebutkan nama asetnya. Kartu draft di halaman Proses Keluar menampilkan peringatan
+sejak awal. Inilah bagian "Clearance Sheet" dari Masterplan §2.1 yang sebelumnya
+tertunda.
+
 ---
 
 ## 3. Hasil Verifikasi
@@ -371,12 +466,18 @@ Geofence      0 m DI DALAM · 400 m di luar · Surabaya di luar
 ### Test otomatis (Pest)
 
 ```
-Tests: 64 passed (221 assertions)
+Tests: 85 passed (282 assertions)
 
 JobVacancyTest         buat lowongan · alur draft/open/closed · proteksi hapus · RBAC
 EmployeeExitTest       alur draft->completed · nomor surat stabil · masa kerja · RBAC
 SalesCompensationTest  bonus menggantikan uang makan · dua slip terpisah · pajak insentif · BPJS
 KnowledgeCenterTest    penargetan audiens · disk privat · RBAC · kebijakan cuti baru
+AttendanceModeTest     mode live diblokir di luar radius · mode upload diterima & pending
+                       · berkas + alasan wajib · setujui mengembalikan kehadiran
+                       · tolak mengubah hari jadi absent · foto privat per-record
+InventoryLoanTest      stok terkunci saat disetujui · stok kurang ditolak · transisi
+                       melompat ditolak · rusak berat menurunkan kondisi aset · hilang
+                       mengurangi unit · aset terpakai tak bisa dihapus · clearance exit
 RecruitmentTest        portal karier · pipeline · konversi hired
 RecruitmentGuardTest   regresi ATS:
   · form konversi tersedia di papan pipeline DAN halaman detail (opsi identik)
@@ -401,7 +502,7 @@ Query per halaman setelah perbaikan N+1: `/rekrutmen` 27 → 18, `/karier` 10 �
 | **PPh 21 TER disederhanakan** | Baru memakai bracket TER A umum; belum membedakan TER B/C per status PTKP. Perlu tabel lengkap + field PTKP sebelum produksi. |
 | **Ekspor masih sinkron** | Aman pada volume saat ini, tapi Tips §7.2 menyarankan background job queue untuk ribuan baris. |
 | **Kuantitas mitra unit/milestone manual** | Belum ada UI input kuantitas per periode; sementara dihitung 1× penuh. |
-| **Cakupan tes masih parsial** | 64 test menutup ATS, Knowledge Center, Exit/Paklaring, dan skema penjualan. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
+| **Cakupan tes masih parsial** | 85 test menutup ATS, Knowledge Center, Exit/Paklaring, skema penjualan, absensi dua opsi, dan peminjaman inventaris. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
 | **Kanban belum drag-and-drop** | Perpindahan tahap lewat tombol/select, bukan seret-lepas. Fungsional, tapi belum senyaman papan kanban penuh. |
 | **Belum ada notification engine** | Peringatan kontrak H-30/H-14 baru tampil di dashboard, belum dikirim via email/WhatsApp. |
 | **Lamaran publik belum di-rate-limit** | Honeypot sudah ada, tapi belum ada throttle per IP pada `/karier/{id}/apply`. |
@@ -425,12 +526,18 @@ Inti Fase 3 sudah jalan; sisa yang membuatnya matang:
 
 ### 5.2 Sisa Modul 1 yang Belum Dikerjakan
 
-Bagian Masterplan §2.1 yang tidak masuk daftar Fase 1:
+Manajemen Aset & Clearance Sheet **sudah dikerjakan** — lihat §2.10. Yang tersisa
+sekadar penyempurnaan, bukan modul baru:
 
-* **Manajemen Aset & Clearance Sheet** (~4 hari) — inventaris fasilitas yang dipinjamkan
-  dan checklist pengembalian saat offboarding. Butuh tabel `company_assets` +
-  `asset_assignments`. Bila dikerjakan, checklist ini wajar dijadikan syarat sebelum
-  proses keluar dapat dituntaskan.
+* **Berita acara serah terima PDF** (~1 hari) — dokumen tanda tangan saat barang
+  diserahkan dan dikembalikan; polanya sama dengan paklaring.
+* **Pengingat jatuh tempo otomatis** (~1 hari) — sekarang keterlambatan hanya terlihat
+  bila HR membuka halaman Inventaris; idealnya masuk notification engine bersama
+  peringatan kontrak H-30/H-14.
+* **Foto kondisi barang** (~1 hari) — bukti visual saat serah terima dan pengembalian,
+  memakai disk privat yang sama dengan foto absensi.
+* **Riwayat pemakaian per aset** (~½ hari) — halaman detail aset berisi seluruh
+  peminjam sebelumnya dan perubahan kondisinya.
 
 ---
 
@@ -456,9 +563,10 @@ Bagian Masterplan §2.1 yang tidak masuk daftar Fase 1:
 app/
 ├── Http/Controllers/
 │   ├── Auth/LoginController.php
-│   ├── AttendanceController.php          # rekap, self-service, clock in/out, 3 ekspor
+│   ├── AttendanceController.php          # rekap, clock in 2 opsi, verifikasi, foto privat, 3 ekspor
 │   ├── CareerController.php              # portal karier publik + form lamaran
-│   ├── ExitController.php                # offboarding + paklaring
+│   ├── ExitController.php                # offboarding + paklaring + cek clearance
+│   ├── InventoryController.php           # katalog aset, siklus pinjam, portal mandiri
 │   ├── SalesController.php               # katalog produk + input unit terjual
 │   ├── JobVacancyController.php          # CRUD lowongan + alur publikasi
 │   ├── KnowledgeController.php           # pengumuman + dokumen + unduh privat
@@ -471,10 +579,11 @@ app/
 │   └── PayrollController.php             # run, slip, PDF, 3 ekspor
 ├── Http/Middleware/EnsureUserHasRole.php # RBAC gate
 ├── Services/
-│   ├── AttendanceService.php             # geofence + anti-fake GPS
+│   ├── AttendanceService.php             # geofence, anti-fake GPS, 2 opsi foto, verifikasi
 │   ├── ExportService.php                 # xlsx/csv/pdf + audit log
 │   ├── ExitService.php                   # tuntaskan exit + nomor paklaring
 │   ├── HiredConversionService.php        # pelamar -> karyawan, satu transaksi
+│   ├── InventoryService.php              # mesin status pinjaman + hitung stok
 │   ├── LeavePolicyService.php            # aturan cuti per entitas
 │   ├── PayrollCalculator.php             # BPJS + PPh 21 TER + skema mitra
 │   └── PayrollRunService.php             # eksekusi periode

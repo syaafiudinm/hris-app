@@ -128,3 +128,32 @@ export function IconShield(props: IconProps) {
         </svg>
     );
 }
+
+export function IconBox(props: IconProps) {
+    return (
+        <svg {...base(props)}>
+            <path d="M21 8.2v7.6a1.6 1.6 0 0 1-.85 1.41l-7.4 3.9a1.6 1.6 0 0 1-1.5 0l-7.4-3.9A1.6 1.6 0 0 1 3 15.8V8.2a1.6 1.6 0 0 1 .85-1.41l7.4-3.9a1.6 1.6 0 0 1 1.5 0l7.4 3.9A1.6 1.6 0 0 1 21 8.2Z" />
+            <path d="m3.3 7.4 8.7 4.6 8.7-4.6" />
+            <path d="M12 12v9" />
+        </svg>
+    );
+}
+
+export function IconCamera(props: IconProps) {
+    return (
+        <svg {...base(props)}>
+            <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
+            <circle cx="12" cy="13.5" r="3.2" />
+        </svg>
+    );
+}
+
+export function IconUpload(props: IconProps) {
+    return (
+        <svg {...base(props)}>
+            <path d="M12 16V4" />
+            <path d="m7 9 5-5 5 5" />
+            <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+        </svg>
+    );
+}

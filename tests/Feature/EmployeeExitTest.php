@@ -13,10 +13,16 @@ beforeEach(function () {
 
 function karyawanTanpaExit(): Employee
 {
-    return Employee::active()
+    $employee = Employee::active()
         ->whereNull('user_id')
         ->whereDoesntHave('exit')
         ->firstOrFail();
+
+    // Pinjaman inventaris yang belum tuntas menahan clearance. Berkas uji ini
+    // menguji alur exit-nya saja — clearance diuji di InventoryLoanTest.
+    $employee->inventoryLoans()->delete();
+
+    return $employee;
 }
 
 test('mencatat proses keluar tidak langsung menonaktifkan karyawan', function () {

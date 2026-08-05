@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmploymentTypeController;
 use App\Http\Controllers\ExitController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\JobVacancyController;
 use App\Http\Controllers\KnowledgeController;
 use App\Http\Controllers\LeaveRequestController;
@@ -21,31 +22,31 @@ use Illuminate\Support\Facades\Route;
  | Portal Karier — route publik, tanpa auth.
  |----------------------------------------------------------------------
  */
-Route::get("/karier", [CareerController::class, "index"])->name(
-    "career.index",
+Route::get('/karier', [CareerController::class, 'index'])->name(
+    'career.index',
 );
-Route::get("/karier/{vacancy}", [CareerController::class, "show"])->name(
-    "career.show",
+Route::get('/karier/{vacancy}', [CareerController::class, 'show'])->name(
+    'career.show',
 );
-Route::post("/karier/{vacancy}/apply", [
+Route::post('/karier/{vacancy}/apply', [
     CareerController::class,
-    "apply",
-])->name("career.apply");
+    'apply',
+])->name('career.apply');
 
-Route::middleware("guest")->group(function () {
-    Route::get("/login", [LoginController::class, "create"])->name("login");
-    Route::post("/login", [LoginController::class, "store"]);
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'create'])->name('login');
+    Route::post('/login', [LoginController::class, 'store']);
 });
 
-Route::post("/logout", [LoginController::class, "destroy"])
-    ->middleware("auth")
-    ->name("logout");
+Route::post('/logout', [LoginController::class, 'destroy'])
+    ->middleware('auth')
+    ->name('logout');
 
-Route::middleware("auth")->group(function () {
-    Route::redirect("/", "/dashboard");
+Route::middleware('auth')->group(function () {
+    Route::redirect('/', '/dashboard');
 
-    Route::get("/dashboard", [DashboardController::class, "index"])->name(
-        "dashboard",
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name(
+        'dashboard',
     );
 
     /*
@@ -53,62 +54,84 @@ Route::middleware("auth")->group(function () {
      | Self-service — semua role, dibatasi ke data miliknya sendiri.
      |----------------------------------------------------------------------
      */
-    Route::get("/absensi-saya", [AttendanceController::class, "me"])->name(
-        "attendance.me",
+    Route::get('/absensi-saya', [AttendanceController::class, 'me'])->name(
+        'attendance.me',
     );
-    Route::post("/absensi-saya/clock-in", [
+    Route::post('/absensi-saya/clock-in', [
         AttendanceController::class,
-        "clockIn",
-    ])->name("attendance.clock-in");
-    Route::post("/absensi-saya/clock-out", [
+        'clockIn',
+    ])->name('attendance.clock-in');
+    Route::post('/absensi-saya/clock-out', [
         AttendanceController::class,
-        "clockOut",
-    ])->name("attendance.clock-out");
+        'clockOut',
+    ])->name('attendance.clock-out');
+    // Foto absensi berada di disk privat; akses dicek per record.
+    Route::get('/absensi/{attendance}/foto', [
+        AttendanceController::class,
+        'photo',
+    ])->name('attendance.photo');
 
-    Route::get("/cuti-saya", [LeaveRequestController::class, "mine"])->name(
-        "leaves.mine",
+    Route::get('/cuti-saya', [LeaveRequestController::class, 'mine'])->name(
+        'leaves.mine',
     );
-    Route::post("/cuti-saya", [LeaveRequestController::class, "store"])->name(
-        "leaves.store",
+    Route::post('/cuti-saya', [LeaveRequestController::class, 'store'])->name(
+        'leaves.store',
     );
-    Route::delete("/cuti-saya/{leaveRequest}", [
+    Route::delete('/cuti-saya/{leaveRequest}', [
         LeaveRequestController::class,
-        "destroy",
-    ])->name("leaves.destroy");
+        'destroy',
+    ])->name('leaves.destroy');
 
-    Route::get("/slip-gaji-saya", [PayrollController::class, "mine"])->name(
-        "payroll.mine",
+    Route::get('/slip-gaji-saya', [PayrollController::class, 'mine'])->name(
+        'payroll.mine',
     );
+
+    // Peminjaman inventaris — pengajuan mandiri.
+    Route::get('/inventaris-saya', [InventoryController::class, 'mine'])->name(
+        'inventory.mine',
+    );
+    Route::post('/inventaris-saya', [
+        InventoryController::class,
+        'requestLoan',
+    ])->name('inventory.request');
+    Route::delete('/inventaris-saya/{loan}', [
+        InventoryController::class,
+        'cancelLoan',
+    ])->name('inventory.cancel');
 
     // Knowledge Center — dapat dibaca semua role, isinya disaring per audiens.
-    Route::get("/knowledge", [KnowledgeController::class, "index"])->name(
-        "knowledge.index",
+    Route::get('/knowledge', [KnowledgeController::class, 'index'])->name(
+        'knowledge.index',
     );
-    Route::get("/knowledge/dokumen/{document}", [
+    Route::get('/knowledge/dokumen/{document}', [
         KnowledgeController::class,
-        "downloadDocument",
-    ])->name("knowledge.document.download");
-    Route::get("/slip-gaji/{payroll}/dokumen", [
+        'downloadDocument',
+    ])->name('knowledge.document.download');
+    Route::get('/slip-gaji/{payroll}/dokumen', [
         PayrollController::class,
-        "document",
-    ])->name("payroll.document");
+        'document',
+    ])->name('payroll.document');
 
     /*
      |----------------------------------------------------------------------
      | Manajemen — HR (super_admin) & Manager.
      |----------------------------------------------------------------------
      */
-    Route::middleware("role:super_admin,manager")->group(function () {
-        Route::get("/absensi", [AttendanceController::class, "index"])->name(
-            "attendance.index",
+    Route::middleware('role:super_admin,manager')->group(function () {
+        Route::get('/absensi', [AttendanceController::class, 'index'])->name(
+            'attendance.index',
         );
-        Route::get("/cuti", [LeaveRequestController::class, "index"])->name(
-            "leaves.index",
+        Route::patch('/absensi/{attendance}/verifikasi', [
+            AttendanceController::class,
+            'verify',
+        ])->name('attendance.verify');
+        Route::get('/cuti', [LeaveRequestController::class, 'index'])->name(
+            'leaves.index',
         );
-        Route::patch("/cuti/{leaveRequest}", [
+        Route::patch('/cuti/{leaveRequest}', [
             LeaveRequestController::class,
-            "decide",
-        ])->name("leaves.decide");
+            'decide',
+        ])->name('leaves.decide');
     });
 
     /*
@@ -116,201 +139,231 @@ Route::middleware("auth")->group(function () {
      | Konfigurasi & payroll — khusus Super Admin / HR.
      |----------------------------------------------------------------------
      */
-    Route::middleware("role:super_admin")->group(function () {
-        Route::resource("employees", EmployeeController::class)->parameters([
-            "employees" => "employee",
+    Route::middleware('role:super_admin')->group(function () {
+        Route::resource('employees', EmployeeController::class)->parameters([
+            'employees' => 'employee',
         ]);
 
-        Route::get("/entitas-kerja", [
+        Route::get('/entitas-kerja', [
             EmploymentTypeController::class,
-            "index",
-        ])->name("employment-types.index");
-        Route::post("/entitas-kerja", [
+            'index',
+        ])->name('employment-types.index');
+        Route::post('/entitas-kerja', [
             EmploymentTypeController::class,
-            "store",
-        ])->name("employment-types.store");
-        Route::patch("/entitas-kerja/{employmentType}", [
+            'store',
+        ])->name('employment-types.store');
+        Route::patch('/entitas-kerja/{employmentType}', [
             EmploymentTypeController::class,
-            "update",
-        ])->name("employment-types.update");
-        Route::delete("/entitas-kerja/{employmentType}", [
+            'update',
+        ])->name('employment-types.update');
+        Route::delete('/entitas-kerja/{employmentType}', [
             EmploymentTypeController::class,
-            "destroy",
-        ])->name("employment-types.destroy");
+            'destroy',
+        ])->name('employment-types.destroy');
 
-        Route::get("/payroll", [PayrollController::class, "index"])->name(
-            "payroll.index",
+        Route::get('/payroll', [PayrollController::class, 'index'])->name(
+            'payroll.index',
         );
-        Route::post("/payroll/run", [PayrollController::class, "run"])->name(
-            "payroll.run",
+        Route::post('/payroll/run', [PayrollController::class, 'run'])->name(
+            'payroll.run',
         );
-        Route::get("/payroll/{payroll}", [
+        Route::get('/payroll/{payroll}', [
             PayrollController::class,
-            "show",
-        ])->name("payroll.show");
-        Route::patch("/payroll/{payroll}/status", [
+            'show',
+        ])->name('payroll.show');
+        Route::patch('/payroll/{payroll}/status', [
             PayrollController::class,
-            "updateStatus",
-        ])->name("payroll.status");
+            'updateStatus',
+        ])->name('payroll.status');
 
-        Route::get("/skema-mitra", [
+        Route::get('/skema-mitra', [
             MitraPayrollSchemaController::class,
-            "index",
-        ])->name("mitra-schemas.index");
-        Route::post("/skema-mitra/{employee}", [
+            'index',
+        ])->name('mitra-schemas.index');
+        Route::post('/skema-mitra/{employee}', [
             MitraPayrollSchemaController::class,
-            "store",
-        ])->name("mitra-schemas.store");
-        Route::delete("/skema-mitra/{mitraPayrollSchema}", [
+            'store',
+        ])->name('mitra-schemas.store');
+        Route::delete('/skema-mitra/{mitraPayrollSchema}', [
             MitraPayrollSchemaController::class,
-            "destroy",
-        ])->name("mitra-schemas.destroy");
+            'destroy',
+        ])->name('mitra-schemas.destroy');
 
         /*
          |------------------------------------------------------------------
          | Penjualan Mitra — sumber insentif & bonus skema sales
          |------------------------------------------------------------------
          */
-        Route::get("/penjualan", [SalesController::class, "index"])->name(
-            "sales.index",
+        Route::get('/penjualan', [SalesController::class, 'index'])->name(
+            'sales.index',
         );
-        Route::post("/penjualan/{employee}", [
+        Route::post('/penjualan/{employee}', [
             SalesController::class,
-            "store",
-        ])->name("sales.store");
-        Route::post("/penjualan-produk", [
+            'store',
+        ])->name('sales.store');
+        Route::post('/penjualan-produk', [
             SalesController::class,
-            "storeProduct",
-        ])->name("sales.product.store");
-        Route::patch("/penjualan-produk/{product}", [
+            'storeProduct',
+        ])->name('sales.product.store');
+        Route::patch('/penjualan-produk/{product}', [
             SalesController::class,
-            "updateProduct",
-        ])->name("sales.product.update");
-        Route::delete("/penjualan-produk/{product}", [
+            'updateProduct',
+        ])->name('sales.product.update');
+        Route::delete('/penjualan-produk/{product}', [
             SalesController::class,
-            "destroyProduct",
-        ])->name("sales.product.destroy");
+            'destroyProduct',
+        ])->name('sales.product.destroy');
 
         /*
          |------------------------------------------------------------------
          | Exit / Paklaring (Modul 1)
          |------------------------------------------------------------------
          */
-        Route::get("/proses-keluar", [ExitController::class, "index"])->name(
-            "exits.index",
+        Route::get('/proses-keluar', [ExitController::class, 'index'])->name(
+            'exits.index',
         );
-        Route::post("/proses-keluar", [ExitController::class, "store"])->name(
-            "exits.store",
+        Route::post('/proses-keluar', [ExitController::class, 'store'])->name(
+            'exits.store',
         );
-        Route::patch("/proses-keluar/{exit}", [
+        Route::patch('/proses-keluar/{exit}', [
             ExitController::class,
-            "update",
-        ])->name("exits.update");
-        Route::patch("/proses-keluar/{exit}/status", [
+            'update',
+        ])->name('exits.update');
+        Route::patch('/proses-keluar/{exit}/status', [
             ExitController::class,
-            "updateStatus",
-        ])->name("exits.status");
-        Route::delete("/proses-keluar/{exit}", [
+            'updateStatus',
+        ])->name('exits.status');
+        Route::delete('/proses-keluar/{exit}', [
             ExitController::class,
-            "destroy",
-        ])->name("exits.destroy");
-        Route::get("/proses-keluar/{exit}/paklaring", [
+            'destroy',
+        ])->name('exits.destroy');
+        Route::get('/proses-keluar/{exit}/paklaring', [
             ExitController::class,
-            "paklaring",
-        ])->name("exits.paklaring");
+            'paklaring',
+        ])->name('exits.paklaring');
+
+        /*
+         |------------------------------------------------------------------
+         | Manajemen Inventaris & Peminjaman (Modul 1)
+         |------------------------------------------------------------------
+         */
+        Route::get('/inventaris', [
+            InventoryController::class,
+            'index',
+        ])->name('inventory.index');
+        Route::post('/inventaris/aset', [
+            InventoryController::class,
+            'storeItem',
+        ])->name('inventory.item.store');
+        Route::patch('/inventaris/aset/{item}', [
+            InventoryController::class,
+            'updateItem',
+        ])->name('inventory.item.update');
+        Route::delete('/inventaris/aset/{item}', [
+            InventoryController::class,
+            'destroyItem',
+        ])->name('inventory.item.destroy');
+        Route::post('/inventaris/pinjaman', [
+            InventoryController::class,
+            'storeLoan',
+        ])->name('inventory.loan.store');
+        Route::patch('/inventaris/pinjaman/{loan}', [
+            InventoryController::class,
+            'updateLoan',
+        ])->name('inventory.loan.update');
 
         /*
          |------------------------------------------------------------------
          | Knowledge Center — pengelolaan konten (Modul 5)
          |------------------------------------------------------------------
          */
-        Route::get("/knowledge/kelola", [
+        Route::get('/knowledge/kelola', [
             KnowledgeController::class,
-            "manage",
-        ])->name("knowledge.manage");
-        Route::post("/knowledge/pengumuman", [
+            'manage',
+        ])->name('knowledge.manage');
+        Route::post('/knowledge/pengumuman', [
             KnowledgeController::class,
-            "storeAnnouncement",
-        ])->name("knowledge.announcement.store");
-        Route::patch("/knowledge/pengumuman/{announcement}", [
+            'storeAnnouncement',
+        ])->name('knowledge.announcement.store');
+        Route::patch('/knowledge/pengumuman/{announcement}', [
             KnowledgeController::class,
-            "updateAnnouncement",
-        ])->name("knowledge.announcement.update");
-        Route::patch("/knowledge/pengumuman/{announcement}/status", [
+            'updateAnnouncement',
+        ])->name('knowledge.announcement.update');
+        Route::patch('/knowledge/pengumuman/{announcement}/status', [
             KnowledgeController::class,
-            "toggleAnnouncement",
-        ])->name("knowledge.announcement.status");
-        Route::delete("/knowledge/pengumuman/{announcement}", [
+            'toggleAnnouncement',
+        ])->name('knowledge.announcement.status');
+        Route::delete('/knowledge/pengumuman/{announcement}', [
             KnowledgeController::class,
-            "destroyAnnouncement",
-        ])->name("knowledge.announcement.destroy");
-        Route::post("/knowledge/dokumen", [
+            'destroyAnnouncement',
+        ])->name('knowledge.announcement.destroy');
+        Route::post('/knowledge/dokumen', [
             KnowledgeController::class,
-            "storeDocument",
-        ])->name("knowledge.document.store");
-        Route::delete("/knowledge/dokumen/{document}", [
+            'storeDocument',
+        ])->name('knowledge.document.store');
+        Route::delete('/knowledge/dokumen/{document}', [
             KnowledgeController::class,
-            "destroyDocument",
-        ])->name("knowledge.document.destroy");
+            'destroyDocument',
+        ])->name('knowledge.document.destroy');
 
-        Route::get("/lowongan", [
+        Route::get('/lowongan', [
             JobVacancyController::class,
-            "index",
-        ])->name("vacancies.index");
-        Route::post("/lowongan", [
+            'index',
+        ])->name('vacancies.index');
+        Route::post('/lowongan', [
             JobVacancyController::class,
-            "store",
-        ])->name("vacancies.store");
-        Route::patch("/lowongan/{vacancy}", [
+            'store',
+        ])->name('vacancies.store');
+        Route::patch('/lowongan/{vacancy}', [
             JobVacancyController::class,
-            "update",
-        ])->name("vacancies.update");
-        Route::patch("/lowongan/{vacancy}/status", [
+            'update',
+        ])->name('vacancies.update');
+        Route::patch('/lowongan/{vacancy}/status', [
             JobVacancyController::class,
-            "toggleStatus",
-        ])->name("vacancies.status");
-        Route::delete("/lowongan/{vacancy}", [
+            'toggleStatus',
+        ])->name('vacancies.status');
+        Route::delete('/lowongan/{vacancy}', [
             JobVacancyController::class,
-            "destroy",
-        ])->name("vacancies.destroy");
+            'destroy',
+        ])->name('vacancies.destroy');
 
         /*
          |------------------------------------------------------------------
          | Rekrutmen (ATS) — Modul 4
          |------------------------------------------------------------------
          */
-        Route::get("/rekrutmen", [
+        Route::get('/rekrutmen', [
             RecruitmentController::class,
-            "index",
-        ])->name("recruitment.index");
-        Route::get("/rekrutmen/{applicant}", [
+            'index',
+        ])->name('recruitment.index');
+        Route::get('/rekrutmen/{applicant}', [
             RecruitmentController::class,
-            "show",
-        ])->name("recruitment.show");
-        Route::patch("/rekrutmen/{applicant}/stage", [
+            'show',
+        ])->name('recruitment.show');
+        Route::patch('/rekrutmen/{applicant}/stage', [
             RecruitmentController::class,
-            "updateStage",
-        ])->name("recruitment.update-stage");
-        Route::post("/rekrutmen/{applicant}/note", [
+            'updateStage',
+        ])->name('recruitment.update-stage');
+        Route::post('/rekrutmen/{applicant}/note', [
             RecruitmentController::class,
-            "addNote",
-        ])->name("recruitment.add-note");
-        Route::post("/rekrutmen/{applicant}/convert", [
+            'addNote',
+        ])->name('recruitment.add-note');
+        Route::post('/rekrutmen/{applicant}/convert', [
             RecruitmentController::class,
-            "convertToHired",
-        ])->name("recruitment.convert");
-        Route::get("/rekrutmen/{applicant}/cv", [
+            'convertToHired',
+        ])->name('recruitment.convert');
+        Route::get('/rekrutmen/{applicant}/cv', [
             RecruitmentController::class,
-            "downloadCv",
-        ])->name("recruitment.cv");
-        Route::get("/rekrutmen/{applicant}/offering-letter", [
+            'downloadCv',
+        ])->name('recruitment.cv');
+        Route::get('/rekrutmen/{applicant}/offering-letter', [
             RecruitmentController::class,
-            "offeringLetter",
-        ])->name("recruitment.offering-letter");
-        Route::get("/rekrutmen/employee/{employee}/contract", [
+            'offeringLetter',
+        ])->name('recruitment.offering-letter');
+        Route::get('/rekrutmen/employee/{employee}/contract', [
             RecruitmentController::class,
-            "contract",
-        ])->name("recruitment.contract");
+            'contract',
+        ])->name('recruitment.contract');
     });
 
     /*
@@ -318,72 +371,75 @@ Route::middleware("auth")->group(function () {
      | Exporting Engine — akses dikontrol RBAC, setiap unduhan diaudit.
      |----------------------------------------------------------------------
      */
-    Route::prefix("export")
-        ->name("export.")
+    Route::prefix('export')
+        ->name('export.')
         ->group(function () {
-            Route::middleware("role:super_admin,manager")->group(function () {
-                Route::get("/absensi", [
+            Route::middleware('role:super_admin,manager')->group(function () {
+                Route::get('/absensi', [
                     AttendanceController::class,
-                    "export",
-                ])->name("attendance");
-                Route::get("/keterlambatan", [
+                    'export',
+                ])->name('attendance');
+                Route::get('/keterlambatan', [
                     AttendanceController::class,
-                    "exportLate",
-                ])->name("attendance-late");
-                Route::get("/timesheet-mitra", [
+                    'exportLate',
+                ])->name('attendance-late');
+                Route::get('/timesheet-mitra', [
                     AttendanceController::class,
-                    "exportMitraTimesheet",
-                ])->name("mitra-timesheet");
-                Route::get("/cuti", [
+                    'exportMitraTimesheet',
+                ])->name('mitra-timesheet');
+                Route::get('/cuti', [
                     LeaveRequestController::class,
-                    "export",
-                ])->name("leaves");
+                    'export',
+                ])->name('leaves');
             });
 
-            Route::middleware("role:super_admin")->group(function () {
-                Route::get("/tenaga-kerja", [
+            Route::middleware('role:super_admin')->group(function () {
+                Route::get('/tenaga-kerja', [
                     EmployeeController::class,
-                    "export",
-                ])->name("employees");
-                Route::get("/kontrak-expiring", [
+                    'export',
+                ])->name('employees');
+                Route::get('/kontrak-expiring', [
                     EmployeeController::class,
-                    "exportExpiring",
-                ])->name("employees-expiring");
-                Route::get("/payroll", [
+                    'exportExpiring',
+                ])->name('employees-expiring');
+                Route::get('/payroll', [
                     PayrollController::class,
-                    "export",
-                ])->name("payroll");
-                Route::get("/payroll-bank", [
+                    'export',
+                ])->name('payroll');
+                Route::get('/payroll-bank', [
                     PayrollController::class,
-                    "exportBankTransfer",
-                ])->name("payroll-bank");
-                Route::get("/payroll-pajak", [
+                    'exportBankTransfer',
+                ])->name('payroll-bank');
+                Route::get('/payroll-pajak', [
                     PayrollController::class,
-                    "exportTax",
-                ])->name("payroll-tax");
+                    'exportTax',
+                ])->name('payroll-tax');
 
                 // Ekspor ATS
-                Route::get("/pelamar", [
+                Route::get('/pelamar', [
                     RecruitmentController::class,
-                    "exportApplicants",
-                ])->name("applicants");
-                Route::get("/lowongan-performa", [
+                    'exportApplicants',
+                ])->name('applicants');
+                Route::get('/lowongan-performa', [
                     RecruitmentController::class,
-                    "exportVacancyPerformance",
-                ])->name("vacancy-performance");
-                Route::get("/conversion-rate", [
+                    'exportVacancyPerformance',
+                ])->name('vacancy-performance');
+                Route::get('/conversion-rate', [
                     RecruitmentController::class,
-                    "exportConversionRate",
-                ])->name("conversion-rate");
-                Route::get("/proses-keluar", [
+                    'exportConversionRate',
+                ])->name('conversion-rate');
+                Route::get('/proses-keluar', [
                     ExitController::class,
-                    "export",
-                ])->name("exits");
-                Route::get("/penjualan", [
+                    'export',
+                ])->name('exits');
+                Route::get('/penjualan', [
                     SalesController::class,
-                    "export",
-                ])->name("sales");
+                    'export',
+                ])->name('sales');
+                Route::get('/inventaris', [
+                    InventoryController::class,
+                    'export',
+                ])->name('inventory');
             });
         });
 });
-

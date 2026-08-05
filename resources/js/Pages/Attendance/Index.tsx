@@ -13,7 +13,13 @@ import {
     statusTone,
     type Paginated,
 } from "@/Components/ui";
-import { IconAlert, IconCheck, IconClock, IconShield } from "@/Components/Icons";
+import {
+    IconAlert,
+    IconCheck,
+    IconClock,
+    IconShield,
+    IconUpload,
+} from "@/Components/Icons";
 import { angka } from "@/lib/format";
 
 type Row = {
@@ -29,6 +35,16 @@ type Row = {
     lateMinutes: number;
     workHours: number;
     isFakeGps: boolean;
+    method: string;
+    methodLabel: string;
+    verification: string;
+    verificationLabel: string;
+    verificationNote: string | null;
+    note: string | null;
+    office: string | null;
+    distance: number | null;
+    isOutsideRadius: boolean;
+    hasPhoto: boolean;
 };
 
 type Props = {
@@ -41,11 +57,16 @@ type Props = {
         category: string | null;
         status: string | null;
         fake_gps_only: boolean;
+        method: string | null;
+        verification: string | null;
     };
     options: {
         departments: { id: number; name: string }[];
         statuses: string[];
         categories: string[];
+        methods: string[];
+        methodLabels: Record<string, string>;
+        verificationLabels: Record<string, string>;
     };
     stats: {
         present: number;
@@ -53,6 +74,8 @@ type Props = {
         absent: number;
         leave: number;
         fakeGps: number;
+        pendingVerification: number;
+        uploadMode: number;
         rangeLabel: string;
     };
 };
@@ -70,6 +93,41 @@ export default function AttendanceIndex({
             "/absensi",
             { ...filters, ...patch },
             { preserveState: true, replace: true },
+        );
+    }
+
+    /**
+     * Keputusan atas absensi mode unggah. Penolakan mengubah hari itu
+     * menjadi "absent", jadi alasannya wajib dicatat.
+     */
+    function decide(row: Row, decision: "approved" | "rejected") {
+        if (decision === "approved") {
+            if (
+                !confirm(
+                    `Setujui absensi ${row.employee} pada ${row.date}? Hari ini akan dihitung sebagai kehadiran.`,
+                )
+            ) {
+                return;
+            }
+
+            router.patch(
+                `/absensi/${row.id}/verifikasi`,
+                { decision },
+                { preserveScroll: true, preserveState: true },
+            );
+            return;
+        }
+
+        const note = prompt(
+            `Alasan menolak absensi ${row.employee} pada ${row.date}? Hari tersebut akan dicatat sebagai tidak hadir.`,
+        );
+
+        if (note === null) return;
+
+        router.patch(
+            `/absensi/${row.id}/verifikasi`,
+            { decision, note },
+            { preserveScroll: true, preserveState: true },
         );
     }
 
@@ -97,7 +155,7 @@ export default function AttendanceIndex({
             <Head title="Rekap Absensi" />
 
             <div className="space-y-5">
-                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                     <StatTile
                         label="Hadir tepat waktu"
                         value={angka(stats.present)}
@@ -119,8 +177,14 @@ export default function AttendanceIndex({
                     <StatTile
                         label="Flag fake GPS"
                         value={angka(stats.fakeGps)}
-                        caption="menunggu verifikasi HR"
+                        caption="perlu ditelusuri HR"
                         icon={<IconShield className="h-4 w-4" />}
+                    />
+                    <StatTile
+                        label="Menunggu verifikasi"
+                        value={angka(stats.pendingVerification)}
+                        caption={`dari ${angka(stats.uploadMode)} absen mode unggah`}
+                        icon={<IconUpload className="h-4 w-4" />}
                     />
                 </section>
 
@@ -128,7 +192,7 @@ export default function AttendanceIndex({
                     title="Catatan kehadiran"
                     subtitle={`${records.total} record sesuai filter`}
                 >
-                    <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+                    <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         <Input
                             type="date"
                             value={filters.from}
@@ -203,6 +267,38 @@ export default function AttendanceIndex({
                                 </option>
                             ))}
                         </Select>
+                        <Select
+                            value={filters.method ?? ""}
+                            onChange={(event) =>
+                                applyFilter({
+                                    method: event.target.value || null,
+                                })
+                            }
+                        >
+                            <option value="">Semua metode absen</option>
+                            {options.methods.map((method) => (
+                                <option key={method} value={method}>
+                                    {options.methodLabels[method] ?? method}
+                                </option>
+                            ))}
+                        </Select>
+                        <Select
+                            value={filters.verification ?? ""}
+                            onChange={(event) =>
+                                applyFilter({
+                                    verification: event.target.value || null,
+                                })
+                            }
+                        >
+                            <option value="">Semua verifikasi</option>
+                            {Object.entries(options.verificationLabels).map(
+                                ([value, label]) => (
+                                    <option key={value} value={value}>
+                                        {label}
+                                    </option>
+                                ),
+                            )}
+                        </Select>
                     </div>
 
                     <label className="mb-4 flex items-center gap-2 text-xs text-ink-soft">
@@ -243,6 +339,9 @@ export default function AttendanceIndex({
                                         </th>
                                         <th className="pb-2 font-medium">
                                             Status
+                                        </th>
+                                        <th className="pb-2 font-medium">
+                                            Metode &amp; verifikasi
                                         </th>
                                     </tr>
                                 </thead>
@@ -296,6 +395,99 @@ export default function AttendanceIndex({
                                                             <IconShield className="h-3 w-3" />
                                                             fake GPS
                                                         </Badge>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="py-2.5">
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <Badge
+                                                        tone={
+                                                            row.method ===
+                                                            "upload"
+                                                                ? "warning"
+                                                                : "neutral"
+                                                        }
+                                                    >
+                                                        {row.methodLabel}
+                                                    </Badge>
+                                                    {row.verification !==
+                                                        "auto" && (
+                                                        <Badge
+                                                            tone={
+                                                                row.verification ===
+                                                                "approved"
+                                                                    ? "good"
+                                                                    : row.verification ===
+                                                                        "rejected"
+                                                                      ? "critical"
+                                                                      : "warning"
+                                                            }
+                                                        >
+                                                            {
+                                                                row.verificationLabel
+                                                            }
+                                                        </Badge>
+                                                    )}
+                                                    {row.isOutsideRadius && (
+                                                        <Badge tone="critical">
+                                                            {row.distance !==
+                                                            null
+                                                                ? `${angka(row.distance)} m dari ${row.office ?? "kantor"}`
+                                                                : "di luar radius"}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+
+                                                {row.note && (
+                                                    <p className="mt-1 max-w-xs text-[11px] text-ink-muted">
+                                                        “{row.note}”
+                                                    </p>
+                                                )}
+                                                {row.verificationNote && (
+                                                    <p className="mt-1 max-w-xs text-[11px] text-ink-muted">
+                                                        HR: {row.verificationNote}
+                                                    </p>
+                                                )}
+
+                                                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                                    {row.hasPhoto && (
+                                                        <a
+                                                            href={`/absensi/${row.id}/foto`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
+                                                        >
+                                                            Lihat foto
+                                                        </a>
+                                                    )}
+                                                    {row.verification ===
+                                                        "pending" && (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    decide(
+                                                                        row,
+                                                                        "approved",
+                                                                    )
+                                                                }
+                                                                className="rounded-md bg-brand-500 px-2 py-1 text-[11px] font-medium text-white transition hover:bg-brand-600"
+                                                            >
+                                                                Setujui
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    decide(
+                                                                        row,
+                                                                        "rejected",
+                                                                    )
+                                                                }
+                                                                className="rounded-md border border-hairline px-2 py-1 text-[11px] font-medium text-[#d03b3b] transition hover:bg-[#fdf2f2]"
+                                                            >
+                                                                Tolak
+                                                            </button>
+                                                        </>
                                                     )}
                                                 </div>
                                             </td>

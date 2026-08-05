@@ -5,12 +5,14 @@ namespace Database\Seeders;
 use App\Models\Announcement;
 use App\Models\Applicant;
 use App\Models\Attendance;
-use App\Models\KnowledgeDocument;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmployeeExit;
 use App\Models\EmploymentType;
+use App\Models\InventoryItem;
+use App\Models\InventoryLoan;
 use App\Models\JobVacancy;
+use App\Models\KnowledgeDocument;
 use App\Models\LeaveRequest;
 use App\Models\MitraPayrollSchema;
 use App\Models\OfficeLocation;
@@ -57,6 +59,7 @@ class HrisDemoSeeder extends Seeder
         $this->seedKnowledgeCenter();
         $this->seedExits();
         $this->seedSales();
+        $this->seedInventory($employees);
     }
 
     /**
@@ -353,9 +356,16 @@ class HrisDemoSeeder extends Seeder
 
     private function seedOfficeLocations(): void
     {
+        // Lokasi kantor sebenarnya. Belum ada UI pengelolaannya, jadi titik ini
+        // adalah satu-satunya sumber kebenaran geofence absensi — ubah di sini
+        // (dan lewat migrasi) bila kantor pindah atau bertambah.
         $definitions = [
-            ['name' => 'Kantor Pusat Jakarta', 'latitude' => -6.2088, 'longitude' => 106.8456, 'radius_meters' => 200],
-            ['name' => 'Kantor Bandung', 'latitude' => -6.9175, 'longitude' => 107.6191, 'radius_meters' => 150],
+            [
+                'name' => 'Kantor Geely Ricklean Makassar',
+                'latitude' => -5.1553330,
+                'longitude' => 119.4237384,
+                'radius_meters' => 150,
+            ],
         ];
 
         foreach ($definitions as $definition) {
@@ -622,14 +632,32 @@ class HrisDemoSeeder extends Seeder
                     : null;
                 $clockOut = $clockIn?->addMinutes(mt_rand(480, 620));
 
+                // Sebagian kecil absen memakai opsi unggah foto (kerja
+                // lapangan / kamera bermasalah). Yang belum lewat dua hari
+                // sengaja dibiarkan pending agar antrean verifikasi HR terisi.
+                $isUpload = $clockIn && mt_rand(1, 100) <= 12;
+                $outsideRadius = $isUpload && mt_rand(1, 100) <= 70;
+
                 $rows[] = [
                     'employee_id' => $employee->id,
                     'date' => $date->toDateString(),
                     'clock_in' => $clockIn,
                     'clock_out' => $clockOut,
-                    'clock_in_lat' => $clockIn ? -6.2 - mt_rand(0, 900) / 100000 : null,
-                    'clock_in_long' => $clockIn ? 106.8 + mt_rand(0, 900) / 100000 : null,
+                    'clock_in_lat' => $clockIn ? -5.1553330 - mt_rand(0, 90) / 100000 : null,
+                    'clock_in_long' => $clockIn ? 119.4237384 + mt_rand(0, 90) / 100000 : null,
                     'clock_in_photo' => $clockIn ? 'attendance/'.Str::uuid().'.jpg' : null,
+                    'clock_in_method' => $isUpload ? 'upload' : 'live',
+                    'clock_in_distance' => $clockIn ? ($outsideRadius ? mt_rand(600, 25000) : mt_rand(5, 140)) : null,
+                    'clock_in_office' => $clockIn ? 'Kantor Geely Ricklean Makassar' : null,
+                    'is_outside_radius' => $outsideRadius,
+                    'clock_in_note' => $isUpload
+                        ? ($outsideRadius ? 'Kunjungan klien di luar kantor.' : 'Kamera browser tidak dapat diakses.')
+                        : null,
+                    'verification_status' => match (true) {
+                        ! $isUpload => 'auto',
+                        $daysAgo <= 2 => 'pending',
+                        default => 'approved',
+                    },
                     'is_fake_gps' => $clockIn && mt_rand(1, 120) === 1,
                     'status' => $status,
                     'work_minutes' => $clockIn && $clockOut ? $clockIn->diffInMinutes($clockOut) : 0,
@@ -689,7 +717,7 @@ class HrisDemoSeeder extends Seeder
                 'offered_category' => 'mitra',
                 'dept' => 'TECH',
                 'quota' => 1,
-                'description' => "Posisi freelance untuk UI/UX Designer yang akan bekerja pada proyek-proyek desain interface internal dan eksternal.",
+                'description' => 'Posisi freelance untuk UI/UX Designer yang akan bekerja pada proyek-proyek desain interface internal dan eksternal.',
                 'requirements' => "- Portofolio desain UI/UX yang kuat\n- Menguasai Figma\n- Memahami prinsip usability dan accessibility\n- Dapat bekerja secara remote",
             ],
             [
@@ -697,7 +725,7 @@ class HrisDemoSeeder extends Seeder
                 'offered_category' => 'probation',
                 'dept' => 'FIN',
                 'quota' => 1,
-                'description' => "Bergabunglah dengan tim keuangan kami sebagai Finance Staff untuk menangani pembukuan, laporan keuangan, dan administrasi pajak.",
+                'description' => 'Bergabunglah dengan tim keuangan kami sebagai Finance Staff untuk menangani pembukuan, laporan keuangan, dan administrasi pajak.',
                 'requirements' => "- S1 Akuntansi atau Keuangan\n- Memahami standar PSAK\n- Teliti dan detail-oriented\n- Fresh graduate dipersilakan melamar",
             ],
             [
@@ -705,7 +733,7 @@ class HrisDemoSeeder extends Seeder
                 'offered_category' => 'pkwt',
                 'dept' => 'MKT',
                 'quota' => 3,
-                'description' => "Kami membutuhkan Digital Marketing Specialist yang kreatif dan data-driven untuk mengelola kampanye digital perusahaan.",
+                'description' => 'Kami membutuhkan Digital Marketing Specialist yang kreatif dan data-driven untuk mengelola kampanye digital perusahaan.',
                 'requirements' => "- Minimal 2 tahun pengalaman di digital marketing\n- Menguasai Google Ads, Meta Ads, dan SEO\n- Familiar dengan tools analytics\n- Kemampuan copywriting yang baik",
             ],
             [
@@ -713,7 +741,7 @@ class HrisDemoSeeder extends Seeder
                 'offered_category' => 'mitra',
                 'dept' => 'MKT',
                 'quota' => 4,
-                'description' => "Mitra content writer untuk menghasilkan artikel berkualitas tinggi. Pembayaran per artikel yang dipublikasikan.",
+                'description' => 'Mitra content writer untuk menghasilkan artikel berkualitas tinggi. Pembayaran per artikel yang dipublikasikan.',
                 'requirements' => "- Pengalaman menulis artikel web/blog\n- Paham SEO on-page\n- Bisa menulis dalam Bahasa Indonesia dan Inggris\n- Disiplin terhadap deadline",
             ],
             [
@@ -721,7 +749,7 @@ class HrisDemoSeeder extends Seeder
                 'offered_category' => 'probation',
                 'dept' => 'OPS',
                 'quota' => 1,
-                'description' => "Memimpin operasional gudang harian, memastikan akurasi inventaris, dan mengoordinasikan tim warehouse.",
+                'description' => 'Memimpin operasional gudang harian, memastikan akurasi inventaris, dan mengoordinasikan tim warehouse.',
                 'requirements' => "- Minimal 2 tahun pengalaman di bidang logistik/warehouse\n- Memahami WMS (Warehouse Management System)\n- Kemampuan leadership yang baik\n- Bersedia kerja shift",
             ],
         ];
@@ -805,5 +833,100 @@ class HrisDemoSeeder extends Seeder
             }
         }
     }
-}
 
+    /**
+     * Katalog inventaris dan riwayat peminjaman.
+     *
+     * @param  EloquentCollection<int, Employee>  $employees
+     */
+    private function seedInventory($employees): void
+    {
+        $catalog = [
+            ['AST-LP-001', 'Laptop Lenovo ThinkPad E14', 'elektronik', 'Lenovo', 'LNV-8842190', 4, 12_500_000],
+            ['AST-LP-002', 'MacBook Air M2', 'elektronik', 'Apple', 'APL-2291043', 2, 18_900_000],
+            ['AST-PR-001', 'Proyektor Epson EB-X06', 'elektronik', 'Epson', 'EPS-771230', 2, 6_400_000],
+            ['AST-KM-001', 'Kamera Canon EOS M50', 'elektronik', 'Canon', 'CNN-553218', 1, 9_800_000],
+            ['AST-MD-001', 'Modem MiFi Telkomsel', 'elektronik', 'Telkomsel', null, 6, 850_000],
+            ['AST-KD-001', 'Motor Operasional Honda Vario', 'kendaraan', 'Honda', 'DD-1234-AB', 2, 21_500_000],
+            ['AST-KD-002', 'Mobil Operasional Toyota Avanza', 'kendaraan', 'Toyota', 'DD-9087-CD', 1, 235_000_000],
+            ['AST-PK-001', 'Toolkit Teknisi Lengkap', 'perkakas', 'Tekiro', null, 3, 1_750_000],
+            ['AST-FN-001', 'Kursi Lipat Acara', 'furnitur', null, null, 40, 185_000],
+            ['AST-DK-001', 'Map Dokumen Legal Perusahaan', 'dokumen', null, null, 5, null],
+        ];
+
+        $items = [];
+
+        foreach ($catalog as [$code, $name, $category, $brand, $serial, $quantity, $price]) {
+            $items[$code] = InventoryItem::create([
+                'code' => $code,
+                'name' => $name,
+                'category' => $category,
+                'brand' => $brand,
+                'serial_number' => $serial,
+                'quantity' => $quantity,
+                'condition' => 'good',
+                'status' => 'active',
+                'location' => $category === 'kendaraan' ? 'Parkir kantor' : 'Gudang lantai 2',
+                'purchase_price' => $price,
+                'purchase_date' => CarbonImmutable::now()->subMonths(mt_rand(4, 36))->toDateString(),
+            ]);
+        }
+
+        $borrowers = $employees->where('status', 'active')->values();
+
+        if ($borrowers->isEmpty()) {
+            return;
+        }
+
+        $hr = User::where('role', 'super_admin')->first();
+        $today = CarbonImmutable::today();
+
+        // Campuran status agar seluruh kolom konsol HR terisi: pengajuan
+        // yang menunggu keputusan, pinjaman berjalan, telat, dan selesai.
+        $plan = [
+            ['AST-LP-001', 'borrowed', -20, 14],
+            ['AST-LP-001', 'returned', -60, -30],
+            ['AST-KD-001', 'borrowed', -9, -3],   // telat, jatuh tempo lewat
+            ['AST-PR-001', 'requested', 0, 7],
+            ['AST-MD-001', 'requested', 0, 21],
+            ['AST-KM-001', 'approved', -1, 10],
+            ['AST-FN-001', 'returned', -45, -38],
+            ['AST-PK-001', 'borrowed', -5, 20],
+            ['AST-LP-002', 'rejected', -12, 5],
+            ['AST-KD-002', 'returned', -25, -18],
+        ];
+
+        foreach ($plan as $index => [$code, $status, $createdOffset, $dueOffset]) {
+            $item = $items[$code];
+            $employee = $borrowers[$index % $borrowers->count()];
+            $createdAt = $today->addDays($createdOffset);
+
+            $loan = InventoryLoan::create([
+                'inventory_item_id' => $item->id,
+                'employee_id' => $employee->id,
+                'quantity' => $code === 'AST-FN-001' ? 12 : 1,
+                'status' => $status,
+                'purpose' => match ($item->category) {
+                    'kendaraan' => 'Kunjungan klien ke luar kota.',
+                    'furnitur' => 'Persiapan town hall karyawan.',
+                    'dokumen' => 'Pengurusan perizinan di notaris.',
+                    default => 'Kebutuhan operasional harian.',
+                },
+                'due_date' => $today->addDays($dueOffset)->toDateString(),
+                'handed_over_at' => in_array($status, ['borrowed', 'returned'], true) ? $createdAt->setTime(9, 30) : null,
+                'returned_at' => $status === 'returned' ? $today->addDays($dueOffset)->setTime(16, 0) : null,
+                'condition_out' => in_array($status, ['borrowed', 'returned'], true) ? 'good' : null,
+                'condition_in' => $status === 'returned' ? (mt_rand(1, 4) === 1 ? 'minor' : 'good') : null,
+                'decision_note' => in_array($status, ['approved', 'borrowed', 'returned'], true)
+                    ? 'Disetujui, harap dikembalikan tepat waktu.'
+                    : ($status === 'rejected' ? 'Unit sedang dialokasikan untuk tim lain.' : null),
+                'decided_by' => $status === 'requested' ? null : $hr?->id,
+                'decided_at' => $status === 'requested' ? null : $createdAt,
+                'created_at' => $createdAt,
+                'updated_at' => $createdAt,
+            ]);
+
+            $loan->save();
+        }
+    }
+}

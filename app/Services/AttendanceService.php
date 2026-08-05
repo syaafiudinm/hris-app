@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\OfficeLocation;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -17,7 +18,14 @@ class AttendanceService
 {
     /** Batas jam masuk sebelum dihitung terlambat. */
     public const WORK_START_HOUR = 8;
+
     public const WORK_START_MINUTE = 0;
+
+    /** Disk privat — foto absensi hanya dibuka lewat route ber-RBAC. */
+    public const PHOTO_DISK = 'local';
+
+    /** Dua opsi absensi yang tersedia. */
+    public const METHODS = ['live', 'upload'];
 
     /** Kecepatan perpindahan wajar antar-absen (km/jam). */
     private const MAX_PLAUSIBLE_SPEED_KMH = 200;
@@ -85,7 +93,10 @@ class AttendanceService
     }
 
     /**
-     * Simpan foto selfie (data URL base64) ke storage publik.
+     * Simpan foto selfie hasil kamera (data URL base64).
+     *
+     * Disk privat: foto absensi adalah data pribadi, hanya boleh diakses
+     * lewat route ber-RBAC, bukan URL publik yang bisa ditebak.
      */
     public function storePhoto(string $dataUrl, Employee $employee): ?string
     {
@@ -101,9 +112,19 @@ class AttendanceService
         }
 
         $path = sprintf('attendance/%s/%s.%s', $employee->id, Str::uuid(), $extension);
-        Storage::disk('public')->put($path, $binary);
+        Storage::disk(self::PHOTO_DISK)->put($path, $binary);
 
         return $path;
+    }
+
+    /**
+     * Simpan foto yang diunggah dari perangkat (opsi absensi kedua).
+     */
+    public function storeUploadedPhoto(UploadedFile $file, Employee $employee): ?string
+    {
+        $path = $file->store(sprintf('attendance/%s', $employee->id), self::PHOTO_DISK);
+
+        return $path === false ? null : $path;
     }
 
     /**
@@ -122,6 +143,43 @@ class AttendanceService
             'status' => $lateMinutes > 0 ? 'late' : 'present',
             'lateMinutes' => $lateMinutes,
         ];
+    }
+
+    /**
+     * Keputusan HR atas absensi mode unggah.
+     *
+     * Penolakan langsung mengubah status menjadi `absent` supaya seluruh
+     * rekap dan payroll — yang menghitung status `present`/`late` — otomatis
+     * tidak lagi mengakui hari tersebut, tanpa perlu filter tambahan.
+     */
+    public function verify(Attendance $record, string $decision, int $userId, ?string $note = null): Attendance
+    {
+        $attributes = [
+            'verification_status' => $decision,
+            'verified_by' => $userId,
+            'verified_at' => CarbonImmutable::now(),
+            'verification_note' => $note,
+        ];
+
+        if ($decision === 'rejected') {
+            $attributes += [
+                'status' => 'absent',
+                'late_minutes' => 0,
+                'work_minutes' => 0,
+            ];
+        }
+
+        if ($decision === 'approved' && $record->clock_in) {
+            $evaluation = $this->evaluateClockIn(CarbonImmutable::parse($record->clock_in));
+            $attributes += [
+                'status' => $evaluation['status'],
+                'late_minutes' => $evaluation['lateMinutes'],
+            ];
+        }
+
+        $record->update($attributes);
+
+        return $record->refresh();
     }
 
     private function isSuspiciouslyRound(float $coordinate): bool
