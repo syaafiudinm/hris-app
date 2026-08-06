@@ -26,6 +26,13 @@ type Props = {
         isBpjsEligible: boolean;
         leaveQuota: number;
     };
+    account: {
+        id: number;
+        email: string;
+        role: string;
+        mustChangePassword: boolean;
+        lastLogin: string | null;
+    } | null;
     mitraSchema: {
         schemaType: string;
         rate: number;
@@ -59,6 +66,7 @@ const SCHEMA_LABELS: Record<string, string> = {
 
 export default function EmployeeShow({
     employee,
+    account,
     mitraSchema,
     exit,
     recentPayrolls,
@@ -272,6 +280,79 @@ export default function EmployeeShow({
                 </div>
 
                 {/* Aturan yang ditegakkan sistem untuk entitas ini */}
+                <div className="space-y-5">
+                    <Card
+                        title="Akun Login"
+                        subtitle="Manajemen akses portal untuk karyawan ini"
+                    >
+                        {account ? (
+                            <div className="space-y-3">
+                                <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                                    <Detail label="Email login">
+                                        {account.email}
+                                    </Detail>
+                                    <Detail label="Role">
+                                        <Badge tone="brand">{account.role}</Badge>
+                                    </Detail>
+                                    <Detail label="Status password">
+                                        {account.mustChangePassword ? (
+                                            <Badge tone="warning">Wajib ganti</Badge>
+                                        ) : (
+                                            <Badge tone="good">Sudah diubah</Badge>
+                                        )}
+                                    </Detail>
+                                </dl>
+
+                                <div className="flex flex-wrap gap-2 border-t border-hairline pt-3">
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => {
+                                            if (confirm('Reset password untuk karyawan ini? Password baru akan ditampilkan setelah reset.')) {
+                                                router.post(`/employees/${employee.id}/reset-password`);
+                                            }
+                                        }}
+                                    >
+                                        Reset Password
+                                    </Button>
+                                    <Button
+                                        variant="danger"
+                                        size="sm"
+                                        onClick={() => {
+                                            if (confirm('Cabut akun login karyawan ini? Karyawan tidak akan bisa login lagi.')) {
+                                                router.delete(`/employees/${employee.id}/akun`);
+                                            }
+                                        }}
+                                    >
+                                        Cabut Akun
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-4">
+                                <p className="text-sm text-ink-muted mb-3">
+                                    Karyawan ini belum memiliki akun login.
+                                </p>
+                                {employee.email ? (
+                                    <Button
+                                        size="sm"
+                                        onClick={() => {
+                                            if (confirm(`Buatkan akun login untuk ${employee.name}? Password default akan ditampilkan.`)) {
+                                                router.post(`/employees/${employee.id}/akun`);
+                                            }
+                                        }}
+                                    >
+                                        Buatkan Akun Login
+                                    </Button>
+                                ) : (
+                                    <p className="text-xs text-ink-muted">
+                                        Tambahkan email terlebih dahulu untuk membuat akun.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </Card>
+
                 <Card
                     title="Hak berdasarkan entitas"
                     subtitle="Ditegakkan server-side, bukan sekadar tampilan"
@@ -306,6 +387,7 @@ export default function EmployeeShow({
                         />
                     </ul>
                 </Card>
+                </div>
             </div>
         </AppLayout>
     );

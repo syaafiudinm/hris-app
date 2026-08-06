@@ -6,7 +6,9 @@ use App\Models\Applicant;
 use App\Models\Employee;
 use App\Models\EmploymentType;
 use App\Models\MitraPayrollSchema;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 
@@ -16,6 +18,10 @@ use Illuminate\Validation\ValidationException;
  */
 class HiredConversionService
 {
+    public function __construct(
+        private AccountProvisioningService $accountService,
+    ) {}
+
     /**
      * Convert an applicant to an employee record.
      *
@@ -66,6 +72,11 @@ class HiredConversionService
                 MitraPayrollSchema::create(array_merge($mitraSchemaData, [
                     'employee_id' => $employee->id,
                 ]));
+            }
+
+            // Auto-provision akun login jika email tersedia.
+            if ($employee->email) {
+                $this->accountService->provision($employee);
             }
 
             // Update applicant — catat converted_employee_id dan stage.

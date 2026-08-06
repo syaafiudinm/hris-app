@@ -12,6 +12,7 @@ use App\Http\Controllers\JobVacancyController;
 use App\Http\Controllers\KnowledgeController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MitraPayrollSchemaController;
+use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\SalesController;
@@ -45,6 +46,21 @@ Route::post('/logout', [LoginController::class, 'destroy'])
 Route::middleware('auth')->group(function () {
     Route::redirect('/', '/dashboard');
 
+    /*
+     |----------------------------------------------------------------------
+     | Ganti Password — dikecualikan dari force_password_change agar
+     | user yang wajib ganti password bisa mengakses halaman ini.
+     |----------------------------------------------------------------------
+     */
+    Route::get('/ganti-password', [PasswordController::class, 'edit'])->name(
+        'password.edit',
+    );
+    Route::put('/ganti-password', [PasswordController::class, 'update'])->name(
+        'password.update',
+    );
+});
+
+Route::middleware(['auth', 'force_password_change'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name(
         'dashboard',
     );
@@ -364,6 +380,24 @@ Route::middleware('auth')->group(function () {
             RecruitmentController::class,
             'contract',
         ])->name('recruitment.contract');
+
+        /*
+         |------------------------------------------------------------------
+         | Manajemen Akun Karyawan
+         |------------------------------------------------------------------
+         */
+        Route::post('/employees/{employee}/akun', [
+            EmployeeController::class,
+            'provisionAccount',
+        ])->name('employees.provision-account');
+        Route::post('/employees/{employee}/reset-password', [
+            EmployeeController::class,
+            'resetPassword',
+        ])->name('employees.reset-password');
+        Route::delete('/employees/{employee}/akun', [
+            EmployeeController::class,
+            'revokeAccount',
+        ])->name('employees.revoke-account');
     });
 
     /*

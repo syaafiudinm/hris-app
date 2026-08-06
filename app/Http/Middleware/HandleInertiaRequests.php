@@ -31,6 +31,7 @@ class HandleInertiaRequests extends Middleware
                         "role" => $user->role,
                         "isManagement" => $user->isManagement(),
                         "isSuperAdmin" => $user->isSuperAdmin(),
+                        "mustChangePassword" => (bool) $user->must_change_password,
                     ]
                     : null,
                 "employee" => $employee
@@ -48,6 +49,7 @@ class HandleInertiaRequests extends Middleware
             "flash" => [
                 "success" => fn () => $request->session()->get("success"),
                 "error" => fn () => $request->session()->get("error"),
+                "warning" => fn () => $request->session()->get("warning"),
             ],
         ];
     }

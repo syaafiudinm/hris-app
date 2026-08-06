@@ -248,23 +248,33 @@ export default function AppLayout({
 
                 {/* Garis pemisah menandai batas gulir menu di atasnya. */}
                 <div className="shrink-0 border-t border-hairline p-3">
-                    <div className="flex items-center gap-3 rounded-xl bg-surface-soft px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-medium text-ink">
-                                {auth?.user?.name ?? "Tamu"}
-                            </p>
-                            <p className="truncate text-[11px] text-ink-muted">
-                                {auth?.user ? ROLE_LABELS[auth.user.role] : "-"}
-                            </p>
+                    <div className="rounded-xl bg-surface-soft px-4 py-3">
+                        <div className="flex items-center gap-3">
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs font-medium text-ink">
+                                    {auth?.user?.name ?? "Tamu"}
+                                </p>
+                                <p className="truncate text-[11px] text-ink-muted">
+                                    {auth?.user ? ROLE_LABELS[auth.user.role] : "-"}
+                                </p>
+                            </div>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => router.post("/logout")}
-                            title="Keluar"
-                            className="shrink-0 rounded-lg px-2 py-1.5 text-[11px] font-medium text-brand-600 transition hover:bg-brand-50 hover:text-brand-700"
-                        >
-                            Keluar
-                        </button>
+                        <div className="mt-2 flex items-center gap-2 border-t border-hairline pt-2">
+                            <Link
+                                href="/ganti-password"
+                                className="shrink-0 rounded-lg px-2 py-1.5 text-[11px] font-medium text-ink-soft transition hover:bg-surface hover:text-ink"
+                            >
+                                Ganti Password
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => router.post("/logout")}
+                                title="Keluar"
+                                className="shrink-0 rounded-lg px-2 py-1.5 text-[11px] font-medium text-brand-600 transition hover:bg-brand-50 hover:text-brand-700"
+                            >
+                                Keluar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </aside>

@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             "role" => \App\Http\Middleware\EnsureUserHasRole::class,
+            "force_password_change" => \App\Http\Middleware\ForcePasswordChange::class,
         ]);
 
         $middleware->redirectGuestsTo(fn () => route("login"));

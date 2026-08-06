@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmploymentType;
+use App\Services\AccountProvisioningService;
 use App\Services\ExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -66,6 +67,16 @@ class EmployeeController extends Controller
 
         $employee = Employee::create($data);
 
+        // Auto-provision akun login jika email tersedia.
+        if ($employee->email) {
+            $provisioner = app(AccountProvisioningService::class);
+            $result = $provisioner->provision($employee);
+
+            return redirect()
+                ->route('employees.show', $employee)
+                ->with('success', "Data {$employee->full_name} berhasil disimpan. Akun login dibuat dengan password: {$result['generated_password']}");
+        }
+
         return redirect()
             ->route('employees.show', $employee)
             ->with('success', "Data {$employee->full_name} berhasil disimpan.");
@@ -103,6 +114,13 @@ class EmployeeController extends Controller
                 'unitLabel' => $employee->mitraPayrollSchema->unit_label,
                 'taxScheme' => $employee->mitraPayrollSchema->tax_scheme,
                 'taxPercentage' => (float) $employee->mitraPayrollSchema->custom_tax_percentage,
+            ] : null,
+            'account' => $employee->user ? [
+                'id' => $employee->user->id,
+                'email' => $employee->user->email,
+                'role' => $employee->user->role,
+                'mustChangePassword' => (bool) $employee->user->must_change_password,
+                'lastLogin' => $employee->user->updated_at?->diffForHumans(),
             ] : null,
             'exit' => $employee->exit ? [
                 'id' => $employee->exit->id,
@@ -161,11 +179,59 @@ class EmployeeController extends Controller
     public function destroy(Employee $employee): RedirectResponse
     {
         $name = $employee->full_name;
+
+        // Hapus akun login terkait.
+        if ($employee->user_id) {
+            app(AccountProvisioningService::class)->revoke($employee);
+        }
+
         $employee->delete();
 
         return redirect()
             ->route('employees.index')
             ->with('success', "Data {$name} telah dihapus.");
+    }
+
+    /**
+     * Buatkan akun login untuk karyawan yang belum punya.
+     */
+    public function provisionAccount(Employee $employee): RedirectResponse
+    {
+        if (! $employee->email) {
+            return back()->with('error', 'Karyawan harus memiliki email untuk membuat akun.');
+        }
+
+        $provisioner = app(AccountProvisioningService::class);
+        $result = $provisioner->provision($employee);
+
+        return back()->with(
+            'success',
+            "Akun login berhasil dibuat untuk {$employee->full_name}. Password: {$result['generated_password']}"
+        );
+    }
+
+    /**
+     * Reset password akun karyawan.
+     */
+    public function resetPassword(Employee $employee): RedirectResponse
+    {
+        $provisioner = app(AccountProvisioningService::class);
+        $newPassword = $provisioner->resetPassword($employee);
+
+        return back()->with(
+            'success',
+            "Password direset untuk {$employee->full_name}. Password baru: {$newPassword}"
+        );
+    }
+
+    /**
+     * Cabut akun login karyawan.
+     */
+    public function revokeAccount(Employee $employee): RedirectResponse
+    {
+        app(AccountProvisioningService::class)->revoke($employee);
+
+        return back()->with('success', "Akun login {$employee->full_name} telah dicabut.");
     }
 
     /**
