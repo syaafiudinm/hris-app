@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Employee;
 use App\Models\MitraPayrollSchema;
+use App\Support\TerTariff;
 
 /**
  * Mesin kalkulasi kompensasi.
@@ -53,7 +54,7 @@ class PayrollCalculator
         // penerimaan karyawan.
         $employeeDeduction = 0.0;
 
-        $pph = $this->pph21Ter($gross);
+        $pph = $this->pph21Ter($gross, $employee->ptkp_status);
         $net = $gross - $employeeDeduction - $pph;
 
         return [
@@ -328,39 +329,36 @@ class PayrollCalculator
     }
 
     /**
-     * PPh 21 metode TER bulanan (PP 58/2023), kategori TER A.
-     * Tabel disederhanakan pada bracket yang umum dipakai payroll bulanan.
+     * PPh 21 metode TER bulanan (PP 58/2023).
+     *
+     * Kategori tarif (A/B/C) ditentukan status PTKP karyawan; tabelnya ada di
+     * App\Support\TerTariff karena itu data regulasi, bukan logika aplikasi.
      */
-    public function pph21Ter(float $monthlyGross): float
+    public function pph21Ter(float $monthlyGross, ?string $ptkpStatus = null): float
     {
-        $rate = match (true) {
-            $monthlyGross <= 5_400_000 => 0.0,
-            $monthlyGross <= 5_650_000 => 0.0025,
-            $monthlyGross <= 5_950_000 => 0.005,
-            $monthlyGross <= 6_300_000 => 0.0075,
-            $monthlyGross <= 6_750_000 => 0.01,
-            $monthlyGross <= 7_500_000 => 0.0125,
-            $monthlyGross <= 8_550_000 => 0.015,
-            $monthlyGross <= 9_650_000 => 0.0175,
-            $monthlyGross <= 10_050_000 => 0.02,
-            $monthlyGross <= 10_350_000 => 0.0225,
-            $monthlyGross <= 10_700_000 => 0.025,
-            $monthlyGross <= 11_050_000 => 0.03,
-            $monthlyGross <= 11_600_000 => 0.04,
-            $monthlyGross <= 12_500_000 => 0.05,
-            $monthlyGross <= 13_750_000 => 0.06,
-            $monthlyGross <= 15_100_000 => 0.07,
-            $monthlyGross <= 16_950_000 => 0.08,
-            $monthlyGross <= 19_750_000 => 0.09,
-            $monthlyGross <= 24_150_000 => 0.10,
-            $monthlyGross <= 26_450_000 => 0.11,
-            $monthlyGross <= 28_000_000 => 0.12,
-            $monthlyGross <= 30_050_000 => 0.13,
-            $monthlyGross <= 32_400_000 => 0.14,
-            $monthlyGross <= 35_400_000 => 0.15,
-            default => 0.17,
-        };
+        return $monthlyGross * TerTariff::rateFor($monthlyGross, $ptkpStatus);
+    }
 
-        return $monthlyGross * $rate;
+    /**
+     * Rincian dasar pemotongan PPh 21 untuk dicetak pada slip, supaya
+     * karyawan dapat mencocokkan tarif yang dikenakan pada dirinya.
+     *
+     * @return array<string, mixed>
+     */
+    public function pph21Breakdown(float $monthlyGross, ?string $ptkpStatus = null): array
+    {
+        $status = $ptkpStatus ?: TerTariff::DEFAULT_PTKP;
+        $rate = TerTariff::rateFor($monthlyGross, $status);
+
+        return [
+            'ptkpStatus' => $status,
+            'ptkpLabel' => TerTariff::PTKP_LABEL[$status] ?? $status,
+            'ptkpAnnual' => TerTariff::PTKP_ANNUAL[$status] ?? null,
+            'terCategory' => TerTariff::categoryFor($status),
+            'rate' => $rate,
+            'ratePercent' => round($rate * 100, 4),
+            'base' => round($monthlyGross, 2),
+            'amount' => round($monthlyGross * $rate, 2),
+        ];
     }
 }

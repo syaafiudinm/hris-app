@@ -46,6 +46,7 @@
     @php
         $rincian = $payroll->details ?? [];
         $bpjs = $rincian['bpjs'] ?? null;
+        $pph = $rincian['pph'] ?? null;
         $rupiah = fn ($angka) => 'Rp '.number_format((float) $angka, 0, ',', '.');
         $persen = fn ($angka) => rtrim(rtrim(number_format((float) $angka, 2, ',', '.'), '0'), ',').'%';
         $totalPotongan = (float) $payroll->bpjs_employee_deduction
@@ -122,7 +123,15 @@
         <tr>
             <td>
                 PPh 21
-                <span style="color:#8fa1b6">(tarif efektif bulanan, PP 58/2023)</span>
+                <span style="color:#8fa1b6">
+                    @if ($pph)
+                        (TER {{ $pph['terCategory'] }} &middot; PTKP {{ $pph['ptkpStatus'] }} &middot;
+                        {{ $persen($pph['ratePercent']) }} &times; {{ $rupiah($pph['base']) }} bruto,
+                        PP 58/2023)
+                    @else
+                        (tarif efektif bulanan, PP 58/2023)
+                    @endif
+                </span>
             </td>
             <td class="value">{{ $rupiah($payroll->pph_deduction) }}</td>
         </tr>

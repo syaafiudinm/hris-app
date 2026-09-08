@@ -31,6 +31,30 @@ test('public users can view vacancies and submit application', function () {
     ]);
 });
 
+test('lamaran publik dibatasi lima per jam per IP', function () {
+    // Honeypot menyaring bot naif, tapi tidak menghalangi skrip yang mengirim
+    // ulang form yang sama. Batas ini yang menghentikannya.
+    $vacancy = JobVacancy::first();
+
+    foreach (range(1, 5) as $urutan) {
+        $this->post("/karier/{$vacancy->id}/apply", [
+            'full_name' => "Pelamar {$urutan}",
+            'email' => "pelamar{$urutan}@example.com",
+            'phone' => '08123456789',
+            'cv' => UploadedFile::fake()->create('resume.pdf', 100, 'application/pdf'),
+        ])->assertRedirect();
+    }
+
+    $this->post("/karier/{$vacancy->id}/apply", [
+        'full_name' => 'Pelamar Keenam',
+        'email' => 'pelamar6@example.com',
+        'phone' => '08123456789',
+        'cv' => UploadedFile::fake()->create('resume.pdf', 100, 'application/pdf'),
+    ])->assertStatus(429);
+
+    $this->assertDatabaseMissing('applicants', ['email' => 'pelamar6@example.com']);
+});
+
 test('super admin can view recruitment pipeline and change stage', function () {
     $admin = User::where('role', 'super_admin')->first();
     $applicant = Applicant::first();

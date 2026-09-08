@@ -19,6 +19,7 @@ class Employee extends Model
         'email',
         'phone',
         'position',
+        'ptkp_status',
         'join_date',
         'contract_start',
         'contract_end',

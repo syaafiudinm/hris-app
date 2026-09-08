@@ -29,10 +29,13 @@ Route::get('/karier', [CareerController::class, 'index'])->name(
 Route::get('/karier/{vacancy}', [CareerController::class, 'show'])->name(
     'career.show',
 );
+// Throttle per IP: honeypot menyaring bot naif, tapi tidak menghalangi
+// pengiriman berulang yang dijalankan skrip. Lima lamaran per jam sudah jauh
+// di atas kebutuhan pelamar sungguhan.
 Route::post('/karier/{vacancy}/apply', [
     CareerController::class,
     'apply',
-])->name('career.apply');
+])->middleware('throttle:5,60')->name('career.apply');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');

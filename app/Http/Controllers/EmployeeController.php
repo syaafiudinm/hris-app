@@ -7,9 +7,11 @@ use App\Models\Employee;
 use App\Models\EmploymentType;
 use App\Services\AccountProvisioningService;
 use App\Services\ExportService;
+use App\Support\TerTariff;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -65,21 +67,29 @@ class EmployeeController extends Controller
     {
         $data = $this->validated($request);
 
-        $employee = Employee::create($data);
+        // Satu transaksi: bila provisioning akun gagal, baris karyawan ikut
+        // dibatalkan. Tanpa ini kegagalan menyisakan karyawan tanpa akun yang
+        // harus dibereskan manual oleh HR.
+        [$employee, $password] = DB::transaction(function () use ($data) {
+            $employee = Employee::create($data);
 
-        // Auto-provision akun login jika email tersedia.
-        if ($employee->email) {
-            $provisioner = app(AccountProvisioningService::class);
-            $result = $provisioner->provision($employee);
+            // Auto-provision akun login jika email tersedia.
+            $password = $employee->email
+                ? app(AccountProvisioningService::class)->provision($employee)['generated_password']
+                : null;
 
-            return redirect()
-                ->route('employees.show', $employee)
-                ->with('success', "Data {$employee->full_name} berhasil disimpan. Akun login dibuat dengan password: {$result['generated_password']}");
+            return [$employee, $password];
+        });
+
+        $message = "Data {$employee->full_name} berhasil disimpan.";
+
+        if ($password) {
+            $message .= " Akun login dibuat dengan password: {$password} — catat sekarang, password ini tidak ditampilkan lagi.";
         }
 
         return redirect()
             ->route('employees.show', $employee)
-            ->with('success', "Data {$employee->full_name} berhasil disimpan.");
+            ->with('success', $message);
     }
 
     public function show(Employee $employee): Response
@@ -94,6 +104,8 @@ class EmployeeController extends Controller
                 'email' => $employee->email,
                 'phone' => $employee->phone,
                 'position' => $employee->position,
+                'ptkpStatus' => $employee->ptkp_status,
+                'terCategory' => TerTariff::categoryFor($employee->ptkp_status),
                 'department' => $employee->department?->name,
                 'type' => $employee->employmentType?->name,
                 'category' => $employee->employmentType?->category,
@@ -155,6 +167,7 @@ class EmployeeController extends Controller
                 'email' => $employee->email,
                 'phone' => $employee->phone,
                 'position' => $employee->position,
+                'ptkp_status' => $employee->ptkp_status,
                 'employment_type_id' => $employee->employment_type_id,
                 'department_id' => $employee->department_id,
                 'join_date' => $employee->join_date?->toDateString(),
@@ -169,7 +182,15 @@ class EmployeeController extends Controller
 
     public function update(Request $request, Employee $employee): RedirectResponse
     {
-        $employee->update($this->validated($request, $employee));
+        $data = $this->validated($request, $employee);
+
+        DB::transaction(function () use ($employee, $data) {
+            $employee->update($data);
+
+            // Nama & email login mengikuti data induk, kalau tidak karyawan
+            // akan login dengan alamat yang berbeda dari profilnya sendiri.
+            app(AccountProvisioningService::class)->syncProfile($employee);
+        });
 
         return redirect()
             ->route('employees.show', $employee)
@@ -206,7 +227,7 @@ class EmployeeController extends Controller
 
         return back()->with(
             'success',
-            "Akun login berhasil dibuat untuk {$employee->full_name}. Password: {$result['generated_password']}"
+            "Akun login berhasil dibuat untuk {$employee->full_name}. Password: {$result['generated_password']} — catat sekarang, password ini tidak ditampilkan lagi."
         );
     }
 
@@ -220,7 +241,7 @@ class EmployeeController extends Controller
 
         return back()->with(
             'success',
-            "Password direset untuk {$employee->full_name}. Password baru: {$newPassword}"
+            "Password direset untuk {$employee->full_name}. Password baru: {$newPassword} — catat sekarang, password ini tidak ditampilkan lagi."
         );
     }
 
@@ -347,6 +368,7 @@ class EmployeeController extends Controller
             'employmentTypes' => EmploymentType::orderBy('id')->get(['id', 'name', 'code', 'category', 'duration_months'])->all(),
             'departments' => Department::orderBy('name')->get(['id', 'name'])->all(),
             'statuses' => ['active', 'inactive', 'expired', 'resigned'],
+            'ptkpStatuses' => TerTariff::options(),
         ];
     }
 
@@ -358,9 +380,19 @@ class EmployeeController extends Controller
         return $request->validate([
             'nik' => ['required', 'string', 'max:50', Rule::unique('employees', 'nik')->ignore($employee)],
             'full_name' => ['required', 'string', 'max:150'],
-            'email' => ['nullable', 'email', 'max:150'],
+            // Unik karena satu email berarti satu akun login: `users.email`
+            // unik di level database, jadi email kembar baru ketahuan sebagai
+            // QueryException saat provisioning — setelah karyawan terlanjur dibuat.
+            'email' => [
+                'nullable',
+                'email',
+                'max:150',
+                Rule::unique('employees', 'email')->ignore($employee),
+            ],
             'phone' => ['nullable', 'string', 'max:30'],
             'position' => ['nullable', 'string', 'max:100'],
+            // Menentukan kategori TER (A/B/C) pada perhitungan PPh 21.
+            'ptkp_status' => ['required', Rule::in(array_keys(TerTariff::PTKP_CATEGORY))],
             'employment_type_id' => ['required', 'exists:employment_types,id'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'join_date' => ['required', 'date'],

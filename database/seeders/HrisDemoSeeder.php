@@ -22,6 +22,7 @@ use App\Models\SalesRecord;
 use App\Models\User;
 use App\Services\ExitService;
 use App\Services\PayrollCalculator;
+use App\Support\TerTariff;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Seeder;
@@ -434,6 +435,9 @@ class HrisDemoSeeder extends Seeder
                 'email' => Str::slug($name, '.').$index.'@perusahaan.co.id',
                 'phone' => '08'.mt_rand(1000000000, 9999999999),
                 'position' => $positions[$deptCode][array_rand($positions[$deptCode])],
+                // Status PTKP diacak agar data demo memperlihatkan ketiga
+                // kategori TER, bukan hanya TER A.
+                'ptkp_status' => array_rand(TerTariff::PTKP_CATEGORY),
                 'join_date' => $contractStart,
                 'contract_start' => $contractStart,
                 'contract_end' => $contractEnd,
@@ -456,6 +460,7 @@ class HrisDemoSeeder extends Seeder
             'full_name' => 'Syaafiudin M',
             'email' => 'hr@perusahaan.co.id',
             'position' => 'HR Manager',
+            'ptkp_status' => 'K/2',
             'join_date' => $today->subYears(2),
             'contract_start' => $today->subMonths(4),
             'contract_end' => $today->addMonths(8),

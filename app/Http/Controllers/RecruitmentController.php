@@ -269,14 +269,20 @@ class RecruitmentController extends Controller
             ];
         }
 
-        $employee = $service->convert(
+        ['employee' => $employee, 'generated_password' => $password] = $service->convert(
             $applicant,
             $data,
             $mitraSchemaData,
             $request->user()?->name,
         );
 
-        return back()->with('success', "{$applicant->full_name} berhasil dikonversi sebagai {$employmentType->name} (NIK: {$employee->nik}).");
+        $message = "{$applicant->full_name} berhasil dikonversi sebagai {$employmentType->name} (NIK: {$employee->nik}).";
+
+        if ($password) {
+            $message .= " Akun login dibuat dengan password: {$password} — catat sekarang, password ini tidak ditampilkan lagi.";
+        }
+
+        return back()->with('success', $message);
     }
 
     /**

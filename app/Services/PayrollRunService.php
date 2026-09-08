@@ -140,6 +140,10 @@ class PayrollRunService
             'bpjs' => $employee->isBpjsEligible()
                 ? $this->calculator->bpjsBreakdown($basic)
                 : null,
+            'pph' => $this->calculator->pph21Breakdown(
+                (float) $amounts['gross_amount'],
+                $employee->ptkp_status,
+            ),
         ];
 
         return $amounts;

@@ -17,6 +17,11 @@ type Props = {
         employmentTypes: EmploymentTypeOption[];
         departments: { id: number; name: string }[];
         statuses: string[];
+        ptkpStatuses: {
+            value: string;
+            label: string;
+            category: string;
+        }[];
     };
 };
 
@@ -29,6 +34,7 @@ export default function EmployeeForm({ employee, options }: Props) {
         email: (employee?.email as string) ?? "",
         phone: (employee?.phone as string) ?? "",
         position: (employee?.position as string) ?? "",
+        ptkp_status: (employee?.ptkp_status as string) ?? "TK/0",
         // Kosong berarti belum dipilih; dikirim sebagai "" agar validasi
         // required di server yang menolak, bukan angka 0 palsu.
         employment_type_id: (employee?.employment_type_id ?? "") as number | "",
@@ -42,6 +48,9 @@ export default function EmployeeForm({ employee, options }: Props) {
 
     const selectedType = options.employmentTypes.find(
         (type) => type.id === Number(data.employment_type_id),
+    );
+    const selectedPtkp = options.ptkpStatuses.find(
+        (ptkp) => ptkp.value === data.ptkp_status,
     );
     const isMitra = selectedType?.category === "mitra";
 
@@ -110,6 +119,25 @@ export default function EmployeeForm({ employee, options }: Props) {
                                     setData("position", event.target.value)
                                 }
                             />
+                        </Field>
+                        <Field
+                            label="Status PTKP"
+                            error={errors.ptkp_status}
+                            required
+                            hint={`Menentukan kategori tarif TER ${selectedPtkp?.category ?? "A"} pada potongan PPh 21.`}
+                        >
+                            <Select
+                                value={data.ptkp_status}
+                                onChange={(event) =>
+                                    setData("ptkp_status", event.target.value)
+                                }
+                            >
+                                {options.ptkpStatuses.map((ptkp) => (
+                                    <option key={ptkp.value} value={ptkp.value}>
+                                        {ptkp.label}
+                                    </option>
+                                ))}
+                            </Select>
                         </Field>
                         <Field label="Divisi" error={errors.department_id}>
                             <Select

@@ -27,14 +27,17 @@ class HiredConversionService
      *
      * @param  array<string, mixed>  $conversionData
      * @param  array<string, mixed>|null  $mitraSchemaData  Skema mitra (jika kategori mitra)
-     * @return Employee
+     * Password akun ikut dikembalikan karena hanya nilai ini kesempatan HR
+     * mencatatnya — di database ia sudah berupa hash.
+     *
+     * @return array{employee: Employee, generated_password: string|null}
      */
     public function convert(
         Applicant $applicant,
         array $conversionData,
         ?array $mitraSchemaData = null,
         ?string $changedBy = null,
-    ): Employee {
+    ): array {
         if ($applicant->converted_employee_id) {
             throw ValidationException::withMessages([
                 'applicant' => 'Pelamar ini sudah dikonversi menjadi karyawan.',
@@ -75,15 +78,15 @@ class HiredConversionService
             }
 
             // Auto-provision akun login jika email tersedia.
-            if ($employee->email) {
-                $this->accountService->provision($employee);
-            }
+            $password = $employee->email
+                ? $this->accountService->provision($employee)['generated_password']
+                : null;
 
             // Update applicant — catat converted_employee_id dan stage.
             $applicant->update(['converted_employee_id' => $employee->id]);
             $applicant->recordStageChange($applicant->stage, 'hired', $changedBy);
 
-            return $employee;
+            return ['employee' => $employee, 'generated_password' => $password];
         });
     }
 

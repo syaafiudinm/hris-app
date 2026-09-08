@@ -5,10 +5,11 @@ Berisi apa yang **sudah jadi**, cara menjalankannya, dan **rencana tahap berikut
 
 | | |
 | :--- | :--- |
-| **Tanggal** | 6 Agustus 2026 |
-| **Progres roadmap** | Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ (ATS + Knowledge Center) · Modul 1 lengkap (Exit, Inventaris & Clearance, Absensi 2 opsi) |
+| **Tanggal** | 8 September 2026 |
+| **Progres roadmap** | Fase 1 ✅ · Fase 2 ✅ · Fase 3 ✅ (ATS + Knowledge Center) · Modul 1 lengkap (Exit, Inventaris & Clearance, Absensi 2 opsi) · Manajemen akun & PPh 21 TER penuh ✅ |
 | **Stack terpasang** | Laravel 12 (PHP 8.4) · Inertia 2 · React 19 · TypeScript · Tailwind 4 · MySQL |
 | **Database** | `hris-db` |
+| **Test** | 116 passed (788 assertions) |
 
 ---
 
@@ -25,7 +26,9 @@ Buka `http://localhost:8000` → diarahkan ke `/login`.
 
 ### Akun demo
 
-Seluruh akun memakai kata sandi **`password`**.
+Dibuat `HrisDemoSeeder` bersama seluruh data contoh. Seluruh akun memakai kata
+sandi **`password`** — **hanya untuk lokal**, jangan dijalankan di server berisi
+data sungguhan.
 
 | Email | Role | Akses |
 | :--- | :--- | :--- |
@@ -33,6 +36,22 @@ Seluruh akun memakai kata sandi **`password`**.
 | `manager@perusahaan.co.id` | Manager / Atasan | Rekap absensi + approval cuti, **dibatasi divisinya** |
 | `karyawan@perusahaan.co.id` | Employee | Portal mandiri (absensi, cuti, slip gaji) |
 | `mitra@perusahaan.co.id` | Mitra | Portal mandiri, termasuk kuota cuti |
+
+### Akun awal produksi
+
+Terpisah dari data demo, aman dijalankan di database yang sudah berisi data
+sungguhan karena seluruhnya `updateOrCreate` berkunci email dan NIK:
+
+```bash
+php artisan db:seed --class=RoleAccountSeeder --force
+```
+
+Membuat satu akun per role (`hr@ricklean.co.id`, `manager@ricklean.co.id`,
+`staf@ricklean.co.id`) beserta baris `employees` pasangannya — akun tanpa
+karyawan tertaut akan kena 403 di seluruh portal mandiri. Daftar dan kata
+sandi awalnya diubah pada konstanta di `database/seeders/RoleAccountSeeder.php`
+sebelum dijalankan. Ketiganya wajib ganti kata sandi saat login pertama
+(lihat §2.11).
 
 ### Isi data demo
 
@@ -121,7 +140,8 @@ File Transfer Bank (CSV) · Rekap Pajak PPh 21/23.
   melainkan ikut dibayarkan perusahaan bersama porsi perusahaan
   (Kes 4% + JHT 3,7% + JKM 0,3% + JKK 0,24% + JP 2%) — total 14,24% dari upah.
 * Ketiga entitas kerja terdaftar BPJS, termasuk Probation dan Mitra.
-* PPh 21 metode **TER PP 58/2023**.
+* PPh 21 metode **TER PP 58/2023**, ketiga kategori tarif (A/B/C) menurut
+  status PTKP karyawan — lihat §2.12.
 * Lembur ditarik dari menit kerja di atas 8 jam × 1,5 × tarif per jam.
 * **Enforcement**: bila `is_bpjs_eligible` bernilai false, seluruh variabel BPJS di-set 0.
 * Slip berstatus `paid` tidak ditimpa kecuali dicentang eksplisit.
@@ -441,6 +461,80 @@ menyebutkan nama asetnya. Kartu draft di halaman Proses Keluar menampilkan perin
 sejak awal. Inilah bagian "Clearance Sheet" dari Masterplan §2.1 yang sebelumnya
 tertunda.
 
+### 2.11 Manajemen Akun Karyawan & Wajib Ganti Password
+
+Sebelumnya baris `employees` dan akun `users` dikelola terpisah, sehingga HR
+harus membuat login lewat seeder atau tinker. Kini keduanya satu alur.
+
+**Provisioning otomatis.** `app/Services/AccountProvisioningService.php`
+dipanggil dari tiga tempat: penambahan karyawan (`EmployeeController::store`),
+konversi pelamar jadi karyawan (`HiredConversionService`), dan tombol manual di
+halaman detail karyawan. Syaratnya satu — karyawan punya email.
+
+| Aksi | Route | Efek |
+| :--- | :--- | :--- |
+| Buat akun | `POST /employees/{employee}/akun` | User baru role `employee`, `user_id` ditautkan |
+| Reset password | `POST /employees/{employee}/reset-password` | Password baru dibangkitkan, wajib ganti lagi |
+| Cabut akun | `DELETE /employees/{employee}/akun` | Baris `users` dihapus, `user_id` dikosongkan |
+
+**Password awal dibangkitkan acak** — 12 karakter dari `random_int`, tanpa
+karakter yang rancu bila didiktekan (`0/O`, `1/l/I`). Nilainya hanya muncul
+sekali pada flash message; di database ia sudah berupa hash. Sebelumnya seluruh
+akun baru memakai string `'password'` yang sama, artinya siapa pun yang pernah
+menerima akun dari sistem ini dapat menebak akun orang lain yang baru dibuat.
+
+**Satu email = satu akun.** `employees.email` divalidasi unik dan pembuatan
+karyawan dibungkus `DB::transaction`. Dua hal itu menutup jalur gagal yang sama
+dari dua sisi: email kembar ditolak sebagai pesan validasi, dan andai
+provisioning tetap gagal karena sebab lain, baris karyawan ikut dibatalkan
+alih-alih tertinggal tanpa akun. Mengubah email karyawan juga memindahkan email
+login lewat `syncProfile()` — tanpa itu karyawan tidak bisa masuk dengan alamat
+yang tertera di profilnya sendiri.
+
+**Wajib ganti password.** Kolom `users.must_change_password` diisi `true` pada
+setiap provisioning dan reset. `app/Http/Middleware/ForcePasswordChange.php`
+mengalihkan user bertanda itu ke `/ganti-password` dan hanya meloloskan route
+`password.*` serta `logout` — jadi password titipan HR tidak bisa dipakai
+berlama-lama. Pada form ganti password, user yang sedang dipaksa **tidak**
+diminta password lama, karena password lamanya memang diberikan HR secara lisan.
+
+---
+
+### 2.12 PPh 21 TER Lengkap & Status PTKP
+
+Sebelumnya kalkulator hanya memakai satu tabel TER A yang dipangkas pada
+bracket umum, dengan asumsi diam-diam bahwa seluruh karyawan berstatus TK/0.
+
+**Kolom baru `employees.ptkp_status`** (default `TK/0`) diisi lewat dropdown
+pada form karyawan dan tampil di halaman detail. Default TK/0 dipilih sadar:
+itu kategori dengan PTKP terendah, jadi karyawan yang statusnya belum
+diperbarui akan **lebih** potong, bukan kurang — kelebihan bisa direstitusi
+lewat SPT tahunan, kekurangan menjadi utang pajak karyawan.
+
+**Tabel tarif pindah ke `app/Support/TerTariff.php`**, terpisah dari logika
+aplikasi karena isinya data regulasi. Ketiga kategori lengkap sesuai Lampiran
+PP 58/2023:
+
+| Kategori | Status PTKP | Ambang bebas pajak |
+| :--- | :--- | :--- |
+| TER A | TK/0, TK/1, K/0 | s.d. Rp 5.400.000 |
+| TER B | TK/2, TK/3, K/1, K/2 | s.d. Rp 6.200.000 |
+| TER C | K/3 | s.d. Rp 6.600.000 |
+
+Batas atas tiap bracket bersifat inklusif, dan baris terakhir ketiganya
+bertarif 34%. Perbaikan tabel juga mengoreksi satu bracket yang sebelumnya
+disederhanakan: penghasilan Rp 11.050.000–11.600.000 kini dikenakan 3,5%, bukan
+4% — karyawan pada band itu tadinya kelebihan potong.
+
+Slip gaji mencetak dasar pemotongannya (`TER B · PTKP K/1 · 2% × Rp 11.000.000
+bruto`) sehingga penerima dapat mencocokkan sendiri, dan rinciannya ikut
+disimpan pada `payrolls.details` saat payroll dijalankan.
+
+> **Batas cakupan:** yang ditangani adalah TER bulanan untuk masa pajak
+> Januari–November. Masa Desember memakai perhitungan tahunan Pasal 17
+> dikurangi PPh yang sudah dipotong sepanjang tahun — belum diimplementasikan,
+> lihat §4.
+
 ---
 
 ## 3. Hasil Verifikasi
@@ -466,7 +560,7 @@ Geofence      0 m DI DALAM · 400 m di luar · Surabaya di luar
 ### Test otomatis (Pest)
 
 ```
-Tests: 85 passed (282 assertions)
+Tests: 116 passed (788 assertions)
 
 JobVacancyTest         buat lowongan · alur draft/open/closed · proteksi hapus · RBAC
 EmployeeExitTest       alur draft->completed · nomor surat stabil · masa kerja · RBAC
@@ -478,7 +572,18 @@ AttendanceModeTest     mode live diblokir di luar radius · mode upload diterima
 InventoryLoanTest      stok terkunci saat disetujui · stok kurang ditolak · transisi
                        melompat ditolak · rusak berat menurunkan kondisi aset · hilang
                        mengurangi unit · aset terpakai tak bisa dihapus · clearance exit
-RecruitmentTest        portal karier · pipeline · konversi hired
+RecruitmentTest        portal karier · pipeline · konversi hired · throttle lamaran 5/jam
+PayrollTaxTest         pemetaan PTKP->TER A/B/C · keutuhan tabel (batas & tarif naik
+                       monoton, ditutup 34%) · ambang bebas pajak tiap kategori · batas
+                       atas inklusif · bracket 11 juta 3%/3,5% · lembur 1,5x tarif per
+                       jam · hari tidak hadir tidak menyumbang lembur · lembur menaikkan
+                       dasar PPh
+EmployeeAccountTest    email kembar ditolak validasi · karyawan batal tersimpan bila
+                       provisioning gagal · ubah email memindahkan email login ·
+                       password acak & tidak seragam · tanpa karakter rancu · wajib
+                       ganti password · flash password sekali · cabut akun
+RoleAccountSeederTest  satu akun per role + karyawan pasangannya · idempoten · tiap
+                       akun membuka halaman sesuai rolenya
 RecruitmentGuardTest   regresi ATS:
   · form konversi tersedia di papan pipeline DAN halaman detail (opsi identik)
   · konversi mitra tanpa skema ditolak, bukan error 500
@@ -499,14 +604,15 @@ Query per halaman setelah perbaikan N+1: `/rekrutmen` 27 → 18, `/karier` 10 �
 | Batasan | Dampak & rencana |
 | :--- | :--- |
 | **Anti-fake GPS di browser terbatas** | Web tidak mengekspos flag mock-location Android, jadi `is_mock_location` selalu `false` dari browser. Tiga heuristik lain tetap bekerja. Deteksi penuh butuh aplikasi native/hybrid. |
-| **PPh 21 TER disederhanakan** | Baru memakai bracket TER A umum; belum membedakan TER B/C per status PTKP. Perlu tabel lengkap + field PTKP sebelum produksi. |
+| **Tabel TER belum dicocokkan dengan lampiran resmi** | Angka bracket pada `app/Support/TerTariff.php` ditranskrip dari Lampiran PP 58/2023 dan **belum diverifikasi baris demi baris terhadap dokumen aslinya**. Satu batas salah ketik sudah cukup membuat potongan seluruh karyawan pada band itu meleset. Cocokkan sekali sebelum payroll produksi pertama. |
+| **Masa pajak Desember belum ditangani** | TER hanya berlaku untuk masa Januari–November. Desember mestinya memakai perhitungan tahunan Pasal 17 dikurangi PPh yang sudah dipotong; sekarang Desember masih dihitung sebagai bulan TER biasa, sehingga selisihnya jatuh ke SPT tahunan karyawan. |
+| **Status PTKP karyawan lama masih default** | Kolom `ptkp_status` diisi `TK/0` untuk seluruh baris yang sudah ada. HR perlu memperbarui status yang sebenarnya; sampai itu dilakukan, karyawan ber-PTKP lebih tinggi kelebihan potong. |
 | **Ekspor masih sinkron** | Aman pada volume saat ini, tapi Tips §7.2 menyarankan background job queue untuk ribuan baris. |
 | **Kuantitas mitra unit/milestone manual** | Belum ada UI input kuantitas per periode; sementara dihitung 1× penuh. |
-| **Cakupan tes masih parsial** | 85 test menutup ATS, Knowledge Center, Exit/Paklaring, skema penjualan, absensi dua opsi, dan peminjaman inventaris. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
+| **Cakupan tes masih parsial** | 116 test menutup ATS, Knowledge Center, Exit/Paklaring, skema penjualan, absensi dua opsi, peminjaman inventaris, PPh 21 TER, lembur, dan manajemen akun. Rule engine cuti/BPJS/RBAC masih diverifikasi lewat smoke test manual, belum jadi test Pest. |
 | **Kanban belum drag-and-drop** | Perpindahan tahap lewat tombol/select, bukan seret-lepas. Fungsional, tapi belum senyaman papan kanban penuh. |
 | **Belum ada notification engine** | Peringatan kontrak H-30/H-14 baru tampil di dashboard, belum dikirim via email/WhatsApp. |
-| **Lamaran publik belum di-rate-limit** | Honeypot sudah ada, tapi belum ada throttle per IP pada `/karier/{id}/apply`. |
-| **`composer audit`** | 30 advisory, seluruhnya dari dependensi Laravel/Symfony bawaan. Jalankan `composer update`. |
+| **Lupa kata sandi belum ada** | Ganti kata sandi sudah ada (§2.11), tapi user yang lupa passwordnya tetap harus minta reset ke HR lewat halaman detail karyawan. Belum ada alur mandiri lewat email. |
 
 ---
 
@@ -517,7 +623,6 @@ Query per halaman setelah perbaikan N+1: `/rekrutmen` 27 → 18, `/karier` 10 �
 Inti Fase 3 sudah jalan; sisa yang membuatnya matang:
 
 * **Kanban drag-and-drop** (~2 hari) — `@dnd-kit/core` disarankan (ringan, aksesibel).
-* **Rate limit lamaran publik** (~1 jam) — `throttle:5,60` pada route apply.
 * **Dashboard ATS lanjutan** (~2 hari) — waktu rata-rata per tahap dan sumber pelamar;
   funnel dasarnya sudah ada di dashboard utama.
 * **Notifikasi pelamar** (~2 hari) — email otomatis saat tahap berubah.
@@ -543,14 +648,22 @@ sekadar penyempurnaan, bukan modul baru:
 
 ### 5.4 Pengerasan Sebelum Produksi
 
+Yang sudah ditutup pada iterasi ini: test Pest PPh 21 TER & lembur (§3), tabel
+TER A/B/C + field PTKP (§2.12), rate limit lamaran publik, dan advisory
+dependensi — `composer audit` bersih per 8 September 2026 setelah
+`league/commonmark` dinaikkan 2.8.3 → 2.10.1 (10 advisory, seluruhnya di paket
+transitif itu; update ditargetkan ke satu paket, bukan `composer update` penuh).
+
+Yang tersisa:
+
 | Prioritas | Pekerjaan |
 | :--- | :--- |
-| **Tinggi** | Test Pest untuk PPh 21 TER dan perhitungan lembur — bagian payroll yang belum tertutup |
-| **Tinggi** | Tabel PPh 21 TER lengkap (A/B/C) + field status PTKP pada `employees` |
-| **Tinggi** | `composer update` untuk menutup advisory dependensi |
+| **Tinggi** | Cocokkan tabel TER pada `app/Support/TerTariff.php` dengan Lampiran PP 58/2023 baris demi baris — satu-satunya angka di sistem ini yang belum diverifikasi terhadap sumber resminya |
+| **Tinggi** | Perhitungan PPh 21 masa Desember (tahunan Pasal 17 dikurangi PPh terpotong) |
+| **Tinggi** | Isi status PTKP karyawan yang sebenarnya; seluruh baris lama masih default TK/0 |
 | Sedang | Pindahkan ekspor besar ke queue + notifikasi berkas siap unduh |
 | Sedang | Notification engine kontrak H-30/H-14 (email / WhatsApp) |
-| Sedang | Lupa kata sandi & ubah kata sandi (belum ada) |
+| Sedang | Lupa kata sandi lewat email (ubah kata sandi sudah ada, §2.11) |
 | Sedang | Halaman audit log ekspor untuk Super Admin (datanya sudah tercatat, UI-nya belum ada) |
 | Rendah | Halaman manajemen divisi (sekarang hanya lewat seeder) |
 | Rendah | Dark mode |
@@ -572,13 +685,17 @@ app/
 │   ├── KnowledgeController.php           # pengumuman + dokumen + unduh privat
 │   ├── RecruitmentController.php         # pipeline, konversi, PDF, unduh CV, 3 ekspor
 │   ├── DashboardController.php           # analytics Modul 5
-│   ├── EmployeeController.php            # CRUD + 2 ekspor
+│   ├── EmployeeController.php            # CRUD + manajemen akun login + 2 ekspor
 │   ├── EmploymentTypeController.php      # definisi entitas
 │   ├── LeaveRequestController.php        # portal + approval + ekspor
 │   ├── MitraPayrollSchemaController.php  # schema builder
+│   ├── PasswordController.php            # halaman & proses ganti password
 │   └── PayrollController.php             # run, slip, PDF, 3 ekspor
-├── Http/Middleware/EnsureUserHasRole.php # RBAC gate
+├── Http/Middleware/
+│   ├── EnsureUserHasRole.php             # RBAC gate
+│   └── ForcePasswordChange.php           # kunci ke /ganti-password sampai diganti
 ├── Services/
+│   ├── AccountProvisioningService.php    # buat/reset/cabut akun login karyawan
 │   ├── AttendanceService.php             # geofence, anti-fake GPS, 2 opsi foto, verifikasi
 │   ├── ExportService.php                 # xlsx/csv/pdf + audit log
 │   ├── ExitService.php                   # tuntaskan exit + nomor paklaring
@@ -587,6 +704,7 @@ app/
 │   ├── LeavePolicyService.php            # aturan cuti per entitas
 │   ├── PayrollCalculator.php             # BPJS + PPh 21 TER + skema mitra
 │   └── PayrollRunService.php             # eksekusi periode
+├── Support/TerTariff.php                 # tabel tarif TER A/B/C + pemetaan PTKP
 └── Exports/TableExport.php
 
 resources/
@@ -597,7 +715,8 @@ resources/
 │   ├── Pages/                            # Auth, Employees, Attendance, Payroll,
 │   │                                     # Leaves, MitraSchemas, EmploymentTypes,
 │   │                                     # Career (publik), Recruitment, Vacancies,
-│   │                                     # Knowledge (baca + kelola), Exits, Sales
+│   │                                     # Knowledge (baca + kelola), Exits, Sales,
+│   │                                     # Inventory, Auth/ChangePassword
 │   └── lib/format.ts                     # format rupiah & angka id-ID
 └── views/
     ├── documents/payslip.blade.php
@@ -608,14 +727,23 @@ resources/
     └── exports/table.blade.php           # template PDF generik
 
 tests/Feature/
+├── AttendanceModeTest.php                # absensi dua opsi & verifikasi HR
+├── EmployeeAccountTest.php               # provisioning akun, email unik, password acak
 ├── EmployeeExitTest.php                  # offboarding & paklaring
+├── InventoryLoanTest.php                 # siklus pinjam & clearance
 ├── JobVacancyTest.php                    # manajemen lowongan
-├── SalesCompensationTest.php             # skema penjualan mitra & BPJS
 ├── KnowledgeCenterTest.php               # audiens, disk privat, kebijakan cuti
-├── RecruitmentTest.php                   # alur utama ATS
-└── RecruitmentGuardTest.php              # regresi bug ATS
+├── PayrollTaxTest.php                    # PPh 21 TER A/B/C & lembur
+├── RecruitmentGuardTest.php              # regresi bug ATS
+├── RecruitmentTest.php                   # alur utama ATS + throttle lamaran
+├── RoleAccountSeederTest.php             # akun awal per role
+└── SalesCompensationTest.php             # skema penjualan mitra & BPJS
 ```
 
 ---
 
-*Diperbarui 3 Agustus 2026 — Modul 1–5 aktif plus skema kompensasi penjualan mitra; menyisakan Manajemen Aset & Clearance Sheet.*
+*Diperbarui 8 September 2026 — Modul 1–5 aktif. Iterasi ini menutup manajemen
+akun karyawan (§2.11), PPh 21 TER penuh A/B/C dengan status PTKP (§2.12), rate
+limit lamaran publik, dan advisory dependensi. 116 test hijau. Yang paling
+mendesak sebelum payroll produksi: mencocokkan tabel TER dengan lampiran resmi
+PP 58/2023.*

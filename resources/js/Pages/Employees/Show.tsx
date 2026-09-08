@@ -13,6 +13,8 @@ type Props = {
         email: string | null;
         phone: string | null;
         position: string | null;
+        ptkpStatus: string | null;
+        terCategory: string;
         department: string | null;
         type: string | null;
         category: string | null;
@@ -143,6 +145,15 @@ export default function EmployeeShow({
                             {employee.category !== "mitra" && (
                                 <Detail label="Gaji pokok">
                                     {rupiah(employee.salary)}
+                                </Detail>
+                            )}
+                            {employee.category !== "mitra" && (
+                                <Detail label="Status PTKP">
+                                    {employee.ptkpStatus ?? "—"}
+                                    <span className="text-ink-muted">
+                                        {" "}
+                                        · tarif TER {employee.terCategory}
+                                    </span>
                                 </Detail>
                             )}
                         </dl>
