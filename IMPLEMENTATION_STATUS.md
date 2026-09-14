@@ -654,7 +654,7 @@ dependensi — `composer audit` bersih per 8 September 2026 setelah
 `league/commonmark` dinaikkan 2.8.3 → 2.10.1 (10 advisory, seluruhnya di paket
 transitif itu; update ditargetkan ke satu paket, bukan `composer update` penuh).
 
-Yang tersisa:
+Yang tersisa: q
 
 | Prioritas | Pekerjaan |
 | :--- | :--- |

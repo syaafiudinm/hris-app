@@ -1,13 +1,6 @@
 import { Head, useForm } from "@inertiajs/react";
 import { Button, Field, Input } from "@/Components/ui";
 
-const DEMO_ACCOUNTS = [
-    { role: "Super Admin / HR", email: "hr@perusahaan.co.id" },
-    { role: "Manager / Atasan", email: "manager@perusahaan.co.id" },
-    { role: "Karyawan", email: "karyawan@perusahaan.co.id" },
-    { role: "Mitra", email: "mitra@perusahaan.co.id" },
-];
-
 export default function Login() {
     const { data, setData, post, processing, errors } = useForm({
         email: "",
@@ -116,35 +109,6 @@ export default function Login() {
                                 {processing ? "Memproses…" : "Masuk"}
                             </Button>
                         </form>
-
-                        <div className="mt-8 rounded-xl border border-hairline bg-surface p-4">
-                            <p className="text-[11px] font-medium text-ink-soft">
-                                Akun demo (kata sandi:{" "}
-                                <code className="text-brand-700">password</code>)
-                            </p>
-                            <ul className="mt-2 space-y-1">
-                                {DEMO_ACCOUNTS.map((account) => (
-                                    <li
-                                        key={account.email}
-                                        className="flex items-center justify-between gap-3 text-[11px]"
-                                    >
-                                        <span className="text-ink-muted">
-                                            {account.role}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setData("email", account.email);
-                                                setData("password", "password");
-                                            }}
-                                            className="font-medium text-brand-600 transition hover:text-brand-700"
-                                        >
-                                            {account.email}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
                     </div>
                 </div>
             </div>
