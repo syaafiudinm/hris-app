@@ -2,6 +2,7 @@
 
 use App\Models\Employee;
 use App\Models\User;
+use Database\Seeders\EmployeeUserSeeder;
 use Database\Seeders\RoleAccountSeeder;
 
 test('seeder akun awal membuat satu pengguna per role beserta data karyawannya', function () {
@@ -51,4 +52,22 @@ test('kata sandi awal dapat dipakai login', function () {
     ])->assertRedirect('/dashboard');
 
     $this->assertAuthenticated();
+});
+
+test('seeder akun karyawan membuat akun employee yang bisa membuka data diri', function () {
+    $this->seed(EmployeeUserSeeder::class);
+    $this->seed(EmployeeUserSeeder::class);
+
+    $users = User::where('email', 'like', '%@ricklean.co.id')->where('role', 'employee')->get();
+
+    expect($users)->toHaveCount(5);
+
+    $andi = User::where('email', 'andi@ricklean.co.id')->firstOrFail();
+    $budi = User::where('email', 'budi@ricklean.co.id')->firstOrFail();
+
+    expect($andi->employee->missingProfileFields())->toBe([])
+        ->and($budi->employee->missingProfileFields())->not->toBe([]);
+
+    $this->actingAs($andi)->get('/data-diri')->assertOk();
+    $this->actingAs($budi)->get('/dashboard')->assertOk();
 });
