@@ -10,18 +10,21 @@ import {
     Select,
     Textarea,
 } from "@/Components/ui";
+import { IconBox } from "@/Components/Icons";
 
 type Item = {
     id: number;
     label: string;
     category: string;
     available: number;
+    photoUrl: string | null;
 };
 
 type Loan = {
     id: number;
     item: string | null;
     itemCode: string | null;
+    itemPhotoUrl: string | null;
     quantity: number;
     status: string;
     statusLabel: string;
@@ -41,15 +44,17 @@ type Props = {
     summary: { open: number; overdue: number };
 };
 
-const TONE: Record<string, "neutral" | "brand" | "good" | "warning" | "critical"> =
-    {
-        requested: "warning",
-        approved: "brand",
-        borrowed: "brand",
-        returned: "good",
-        rejected: "neutral",
-        lost: "critical",
-    };
+const TONE: Record<
+    string,
+    "neutral" | "brand" | "good" | "warning" | "critical"
+> = {
+    requested: "warning",
+    approved: "brand",
+    borrowed: "brand",
+    returned: "good",
+    rejected: "neutral",
+    lost: "critical",
+};
 
 export default function InventoryMine({ items, loans, summary }: Props) {
     const form = useForm({
@@ -90,16 +95,23 @@ export default function InventoryMine({ items, loans, summary }: Props) {
                                         className="rounded-xl border border-hairline p-4"
                                     >
                                         <div className="flex flex-wrap items-start justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <p className="font-medium text-ink">
-                                                    {loan.item}
-                                                    <span className="ml-1.5 text-xs font-normal text-ink-muted">
-                                                        ×{loan.quantity}
-                                                    </span>
-                                                </p>
-                                                <p className="tabular mt-0.5 text-[11px] text-ink-muted">
-                                                    {loan.itemCode}
-                                                </p>
+                                            <div className="flex min-w-0 items-start gap-3">
+                                                <AssetPhoto
+                                                    url={loan.itemPhotoUrl}
+                                                    name={loan.item ?? ""}
+                                                    className="h-10 w-10"
+                                                />
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-ink">
+                                                        {loan.item}
+                                                        <span className="ml-1.5 text-xs font-normal text-ink-muted">
+                                                            ×{loan.quantity}
+                                                        </span>
+                                                    </p>
+                                                    <p className="tabular mt-0.5 text-[11px] text-ink-muted">
+                                                        {loan.itemCode}
+                                                    </p>
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 {loan.isOverdue && (
@@ -212,6 +224,25 @@ export default function InventoryMine({ items, loans, summary }: Props) {
                                 </Select>
                             </Field>
 
+                            {selected && (
+                                <div className="flex items-center gap-3 rounded-xl bg-surface-soft p-2.5">
+                                    <AssetPhoto
+                                        url={selected.photoUrl}
+                                        name={selected.label}
+                                        className="h-16 w-16"
+                                    />
+                                    <div className="min-w-0 text-xs">
+                                        <p className="font-medium text-ink">
+                                            {selected.label}
+                                        </p>
+                                        <p className="mt-0.5 text-ink-muted">
+                                            {selected.category} ·{" "}
+                                            {selected.available} unit tersedia
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <Field
                                     label="Jumlah"
@@ -322,5 +353,32 @@ export default function InventoryMine({ items, loans, summary }: Props) {
                 </div>
             </div>
         </AppLayout>
+    );
+}
+
+function AssetPhoto({
+    url,
+    name,
+    className,
+}: {
+    url: string | null;
+    name: string;
+    className: string;
+}) {
+    return url ? (
+        <a href={url} target="_blank" rel="noreferrer" className="shrink-0">
+            <img
+                src={url}
+                alt={name}
+                loading="lazy"
+                className={`rounded-lg border border-hairline bg-surface object-cover ${className}`}
+            />
+        </a>
+    ) : (
+        <span
+            className={`grid shrink-0 place-items-center rounded-lg bg-surface-soft text-ink-muted ${className}`}
+        >
+            <IconBox className="h-4 w-4" />
+        </span>
     );
 }

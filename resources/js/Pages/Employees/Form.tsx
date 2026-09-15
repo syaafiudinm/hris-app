@@ -1,6 +1,12 @@
 import { Head, useForm } from "@inertiajs/react";
 import Card from "@/Components/Card";
 import AppLayout from "@/Layouts/AppLayout";
+import {
+    EmergencyContactFields,
+    IdentityFields,
+    personalDataFrom,
+    type PersonalOptions,
+} from "@/Components/PersonalDataFields";
 import { Button, Field, Input, LinkButton, Select } from "@/Components/ui";
 
 type EmploymentTypeOption = {
@@ -22,7 +28,7 @@ type Props = {
             label: string;
             category: string;
         }[];
-    };
+    } & PersonalOptions;
 };
 
 export default function EmployeeForm({ employee, options }: Props) {
@@ -44,7 +50,11 @@ export default function EmployeeForm({ employee, options }: Props) {
         contract_end: (employee?.contract_end as string) ?? "",
         basic_salary: (employee?.basic_salary as number) ?? 0,
         status: (employee?.status as string) ?? "active",
+        ...personalDataFrom(employee),
     });
+
+    const setField = (field: string, value: string | number) =>
+        setData(field as keyof typeof data, value as never);
 
     const selectedType = options.employmentTypes.find(
         (type) => type.id === Number(data.employment_type_id),
@@ -69,7 +79,9 @@ export default function EmployeeForm({ employee, options }: Props) {
             title={isEdit ? "Ubah Data Tenaga Kerja" : "Tambah Tenaga Kerja"}
             subtitle="Entitas kerja yang dipilih menentukan hak cuti & BPJS secara otomatis"
         >
-            <Head title={isEdit ? "Ubah Tenaga Kerja" : "Tambah Tenaga Kerja"} />
+            <Head
+                title={isEdit ? "Ubah Tenaga Kerja" : "Tambah Tenaga Kerja"}
+            />
 
             <form onSubmit={submit} className="max-w-3xl space-y-5">
                 <Card title="Identitas">
@@ -95,7 +107,11 @@ export default function EmployeeForm({ employee, options }: Props) {
                                 }
                             />
                         </Field>
-                        <Field label="Email" error={errors.email}>
+                        <Field
+                            label="Email aktif"
+                            error={errors.email}
+                            hint="Dipakai juga sebagai email login."
+                        >
                             <Input
                                 type="email"
                                 value={data.email}
@@ -104,7 +120,7 @@ export default function EmployeeForm({ employee, options }: Props) {
                                 }
                             />
                         </Field>
-                        <Field label="Telepon" error={errors.phone}>
+                        <Field label="No WhatsApp" error={errors.phone}>
                             <Input
                                 value={data.phone}
                                 onChange={(event) =>
@@ -112,7 +128,7 @@ export default function EmployeeForm({ employee, options }: Props) {
                                 }
                             />
                         </Field>
-                        <Field label="Jabatan" error={errors.position}>
+                        <Field label="Posisi" error={errors.position}>
                             <Input
                                 value={data.position}
                                 onChange={(event) =>
@@ -139,7 +155,7 @@ export default function EmployeeForm({ employee, options }: Props) {
                                 ))}
                             </Select>
                         </Field>
-                        <Field label="Divisi" error={errors.department_id}>
+                        <Field label="Departemen" error={errors.department_id}>
                             <Select
                                 value={data.department_id}
                                 onChange={(event) =>
@@ -149,7 +165,7 @@ export default function EmployeeForm({ employee, options }: Props) {
                                     )
                                 }
                             >
-                                <option value="">— pilih divisi —</option>
+                                <option value="">— pilih departemen —</option>
                                 {options.departments.map((department) => (
                                     <option
                                         key={department.id}
@@ -160,6 +176,30 @@ export default function EmployeeForm({ employee, options }: Props) {
                                 ))}
                             </Select>
                         </Field>
+                    </div>
+                </Card>
+
+                <Card
+                    title="Data diri"
+                    subtitle="Boleh dikosongkan — karyawan dapat melengkapinya sendiri lewat menu Data Diri."
+                >
+                    <div className="space-y-5">
+                        <IdentityFields
+                            data={data}
+                            setData={setField}
+                            errors={errors}
+                            options={options}
+                        />
+                        <div className="border-t border-hairline pt-4">
+                            <p className="mb-3 text-xs font-medium text-ink">
+                                Kontak darurat
+                            </p>
+                            <EmergencyContactFields
+                                data={data}
+                                setData={setField}
+                                errors={errors}
+                            />
+                        </div>
                     </div>
                 </Card>
 
@@ -254,7 +294,10 @@ export default function EmployeeForm({ employee, options }: Props) {
                                 type="date"
                                 value={data.contract_start}
                                 onChange={(event) =>
-                                    setData("contract_start", event.target.value)
+                                    setData(
+                                        "contract_start",
+                                        event.target.value,
+                                    )
                                 }
                             />
                         </Field>

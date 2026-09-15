@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
                         "category" => $employee->employmentType?->category,
                         "isLeaveEligible" => $employee->isLeaveEligible(),
                         "isBpjsEligible" => $employee->isBpjsEligible(),
+                        "profileCompletion" => $employee->profileCompletion(),
                     ]
                     : null,
             ],

@@ -47,6 +47,7 @@ class InventoryItem extends Model
         'purchase_price',
         'purchase_date',
         'notes',
+        'photo_path',
     ];
 
     protected function casts(): array

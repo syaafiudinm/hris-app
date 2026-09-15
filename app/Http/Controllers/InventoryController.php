@@ -11,9 +11,13 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Modul 1 — Manajemen peminjaman inventaris.
@@ -23,6 +27,9 @@ use Inertia\Response;
  */
 class InventoryController extends Controller
 {
+    /** Foto aset disimpan privat, sejalan dengan berkas lain di aplikasi. */
+    private const PHOTO_DISK = 'local';
+
     public function __construct(private InventoryService $inventory) {}
 
     /**
@@ -117,6 +124,7 @@ class InventoryController extends Controller
                 'label' => "{$item->code} · {$item->name}",
                 'category' => $item->category,
                 'available' => $item->availableQuantity(),
+                'photoUrl' => $this->photoUrl($item),
             ])
             ->all();
 
@@ -139,7 +147,13 @@ class InventoryController extends Controller
 
     public function storeItem(Request $request): RedirectResponse
     {
-        InventoryItem::create($this->validatedItem($request));
+        $data = $this->validatedItem($request);
+        $photo = $request->file('photo');
+
+        InventoryItem::create([
+            ...$data,
+            'photo_path' => $photo ? $this->storePhoto($photo) : null,
+        ]);
 
         return back()->with('success', 'Aset berhasil ditambahkan ke katalog.');
     }
@@ -153,7 +167,19 @@ class InventoryController extends Controller
             return back()->with('error', "Jumlah unit tidak bisa kurang dari {$held} unit yang sedang dipinjam.");
         }
 
+        $oldPhoto = $item->photo_path;
+
+        if ($photo = $request->file('photo')) {
+            $data['photo_path'] = $this->storePhoto($photo);
+        } elseif ($request->boolean('remove_photo')) {
+            $data['photo_path'] = null;
+        }
+
         $item->update($data);
+
+        if ($oldPhoto && $oldPhoto !== $item->photo_path) {
+            Storage::disk(self::PHOTO_DISK)->delete($oldPhoto);
+        }
 
         return back()->with('success', 'Data aset diperbarui.');
     }
@@ -164,9 +190,29 @@ class InventoryController extends Controller
             return back()->with('error', 'Aset masih memiliki pinjaman berjalan dan tidak dapat dihapus.');
         }
 
+        $photo = $item->photo_path;
         $item->delete();
 
+        if ($photo) {
+            Storage::disk(self::PHOTO_DISK)->delete($photo);
+        }
+
         return back()->with('success', 'Aset dihapus dari katalog.');
+    }
+
+    /**
+     * Foto aset — bisa dilihat semua pengguna yang login, karena katalog
+     * juga tampil di portal peminjaman pegawai.
+     */
+    public function photo(InventoryItem $item): StreamedResponse
+    {
+        $disk = Storage::disk(self::PHOTO_DISK);
+
+        abort_if(! $item->photo_path || ! $disk->exists($item->photo_path), 404, 'Foto aset tidak ditemukan.');
+
+        return $disk->response($item->photo_path, headers: [
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
     }
 
     /**
@@ -306,7 +352,28 @@ class InventoryController extends Controller
             'purchasePrice' => $item->purchase_price !== null ? (float) $item->purchase_price : null,
             'purchaseDate' => $item->purchase_date?->toDateString(),
             'notes' => $item->notes,
+            'photoUrl' => $this->photoUrl($item),
         ];
+    }
+
+    /**
+     * URL foto dengan penanda versi agar cache browser gugur saat foto diganti.
+     */
+    private function photoUrl(?InventoryItem $item): ?string
+    {
+        if (! $item?->photo_path) {
+            return null;
+        }
+
+        return route('inventory.item.photo', [
+            'item' => $item,
+            'v' => $item->updated_at?->timestamp,
+        ]);
+    }
+
+    private function storePhoto(UploadedFile $photo): string
+    {
+        return $photo->store('inventory-photos', self::PHOTO_DISK);
     }
 
     /**
@@ -319,6 +386,7 @@ class InventoryController extends Controller
             'itemId' => $loan->inventory_item_id,
             'item' => $loan->item?->name,
             'itemCode' => $loan->item?->code,
+            'itemPhotoUrl' => $this->photoUrl($loan->item),
             'employee' => $loan->employee?->full_name,
             'nik' => $loan->employee?->nik,
             'department' => $loan->employee?->department?->name,
@@ -344,7 +412,8 @@ class InventoryController extends Controller
      */
     private function validatedItem(Request $request, ?InventoryItem $item = null): array
     {
-        return $request->validate([
+        // Foto ditangani terpisah karena perlu disimpan ke disk dulu.
+        return Arr::except($request->validate([
             'code' => ['required', 'string', 'max:40', Rule::unique('inventory_items', 'code')->ignore($item?->id)],
             'name' => ['required', 'string', 'max:255'],
             'category' => ['required', Rule::in(InventoryItem::CATEGORIES)],
@@ -357,7 +426,13 @@ class InventoryController extends Controller
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'purchase_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_photo' => ['nullable', 'boolean'],
+        ], [
+            'photo.image' => 'Foto aset harus berupa gambar.',
+            'photo.mimes' => 'Foto aset harus berformat JPG, PNG, atau WEBP.',
+            'photo.max' => 'Ukuran foto aset maksimal 2 MB.',
+        ]), ['photo', 'remove_photo']);
     }
 
     /**

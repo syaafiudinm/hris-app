@@ -1,6 +1,9 @@
 import { Head, router } from "@inertiajs/react";
 import Card from "@/Components/Card";
 import AppLayout from "@/Layouts/AppLayout";
+import EmployeeDocuments, {
+    type DocumentSlot,
+} from "@/Components/EmployeeDocuments";
 import { Badge, Button, LinkButton, statusTone } from "@/Components/ui";
 import { IconAlert, IconCheck } from "@/Components/Icons";
 import { rupiah } from "@/lib/format";
@@ -28,6 +31,23 @@ type Props = {
         isBpjsEligible: boolean;
         leaveQuota: number;
     };
+    personal: {
+        ktpNumber: string | null;
+        birth: string | null;
+        gender: string | null;
+        religion: string | null;
+        maritalStatus: string | null;
+        dependentsCount: number | null;
+        ktpAddress: string | null;
+        domicileAddress: string | null;
+        emergencyContactName: string | null;
+        emergencyContactRelation: string | null;
+        emergencyContactPhone: string | null;
+        missingFields: string[];
+        missingDocuments: string[];
+        completion: number;
+    };
+    documents: DocumentSlot[];
     account: {
         id: number;
         email: string;
@@ -68,6 +88,8 @@ const SCHEMA_LABELS: Record<string, string> = {
 
 export default function EmployeeShow({
     employee,
+    personal,
+    documents,
     account,
     mitraSchema,
     exit,
@@ -117,13 +139,13 @@ export default function EmployeeShow({
                                     {employee.status}
                                 </Badge>
                             </Detail>
-                            <Detail label="Divisi">
+                            <Detail label="Departemen">
                                 {employee.department ?? "-"}
                             </Detail>
-                            <Detail label="Email">
+                            <Detail label="Email aktif">
                                 {employee.email ?? "-"}
                             </Detail>
-                            <Detail label="Telepon">
+                            <Detail label="No WhatsApp">
                                 {employee.phone ?? "-"}
                             </Detail>
                             <Detail label="Bergabung">
@@ -157,6 +179,81 @@ export default function EmployeeShow({
                                 </Detail>
                             )}
                         </dl>
+                    </Card>
+
+                    <Card
+                        title="Data diri"
+                        subtitle={
+                            personal.missingFields.length > 0
+                                ? `Belum diisi: ${personal.missingFields.join(", ")}`
+                                : "Seluruh isian data diri sudah lengkap"
+                        }
+                        action={
+                            <Badge
+                                tone={
+                                    personal.completion >= 100
+                                        ? "good"
+                                        : "warning"
+                                }
+                            >
+                                {personal.completion}% lengkap
+                            </Badge>
+                        }
+                    >
+                        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                            <Detail label="No KTP">
+                                <span className="tabular">
+                                    {personal.ktpNumber ?? "-"}
+                                </span>
+                            </Detail>
+                            <Detail label="Tempat, tanggal lahir">
+                                {personal.birth ?? "-"}
+                            </Detail>
+                            <Detail label="Jenis kelamin">
+                                {personal.gender ?? "-"}
+                            </Detail>
+                            <Detail label="Agama">
+                                {personal.religion ?? "-"}
+                            </Detail>
+                            <Detail label="Status pernikahan">
+                                {personal.maritalStatus ?? "-"}
+                            </Detail>
+                            <Detail label="Tanggungan se-KK">
+                                {personal.dependentsCount ?? "-"}
+                            </Detail>
+                            <Detail label="Alamat sesuai KTP">
+                                {personal.ktpAddress ?? "-"}
+                            </Detail>
+                            <Detail label="Alamat domisili">
+                                {personal.domicileAddress ?? "-"}
+                            </Detail>
+                            <Detail label="Kontak darurat">
+                                {personal.emergencyContactName ?? "-"}
+                                {personal.emergencyContactRelation && (
+                                    <span className="text-ink-muted">
+                                        {" "}
+                                        · {personal.emergencyContactRelation}
+                                    </span>
+                                )}
+                            </Detail>
+                            <Detail label="Nomor kontak darurat">
+                                {personal.emergencyContactPhone ?? "-"}
+                            </Detail>
+                        </dl>
+                    </Card>
+
+                    <Card
+                        title="Dokumen kelengkapan"
+                        subtitle={
+                            personal.missingDocuments.length > 0
+                                ? `Dokumen wajib belum diunggah: ${personal.missingDocuments.join(", ")}`
+                                : "Seluruh dokumen wajib sudah diunggah"
+                        }
+                    >
+                        <EmployeeDocuments
+                            slots={documents}
+                            uploadUrl={`/employees/${employee.id}/dokumen`}
+                        />
                     </Card>
 
                     {mitraSchema && (
@@ -216,7 +313,9 @@ export default function EmployeeShow({
                                 <Detail label="Hari kerja terakhir">
                                     {exit.lastWorkingDate}
                                 </Detail>
-                                <Detail label="Masa kerja">{exit.tenure}</Detail>
+                                <Detail label="Masa kerja">
+                                    {exit.tenure}
+                                </Detail>
                             </dl>
 
                             {exit.paklaringNumber && (
@@ -303,13 +402,19 @@ export default function EmployeeShow({
                                         {account.email}
                                     </Detail>
                                     <Detail label="Role">
-                                        <Badge tone="brand">{account.role}</Badge>
+                                        <Badge tone="brand">
+                                            {account.role}
+                                        </Badge>
                                     </Detail>
                                     <Detail label="Status password">
                                         {account.mustChangePassword ? (
-                                            <Badge tone="warning">Wajib ganti</Badge>
+                                            <Badge tone="warning">
+                                                Wajib ganti
+                                            </Badge>
                                         ) : (
-                                            <Badge tone="good">Sudah diubah</Badge>
+                                            <Badge tone="good">
+                                                Sudah diubah
+                                            </Badge>
                                         )}
                                     </Detail>
                                 </dl>
@@ -319,8 +424,14 @@ export default function EmployeeShow({
                                         variant="secondary"
                                         size="sm"
                                         onClick={() => {
-                                            if (confirm('Reset password untuk karyawan ini? Password baru akan ditampilkan setelah reset.')) {
-                                                router.post(`/employees/${employee.id}/reset-password`);
+                                            if (
+                                                confirm(
+                                                    "Reset password untuk karyawan ini? Password baru akan ditampilkan setelah reset.",
+                                                )
+                                            ) {
+                                                router.post(
+                                                    `/employees/${employee.id}/reset-password`,
+                                                );
                                             }
                                         }}
                                     >
@@ -330,8 +441,14 @@ export default function EmployeeShow({
                                         variant="danger"
                                         size="sm"
                                         onClick={() => {
-                                            if (confirm('Cabut akun login karyawan ini? Karyawan tidak akan bisa login lagi.')) {
-                                                router.delete(`/employees/${employee.id}/akun`);
+                                            if (
+                                                confirm(
+                                                    "Cabut akun login karyawan ini? Karyawan tidak akan bisa login lagi.",
+                                                )
+                                            ) {
+                                                router.delete(
+                                                    `/employees/${employee.id}/akun`,
+                                                );
                                             }
                                         }}
                                     >
@@ -348,8 +465,14 @@ export default function EmployeeShow({
                                     <Button
                                         size="sm"
                                         onClick={() => {
-                                            if (confirm(`Buatkan akun login untuk ${employee.name}? Password default akan ditampilkan.`)) {
-                                                router.post(`/employees/${employee.id}/akun`);
+                                            if (
+                                                confirm(
+                                                    `Buatkan akun login untuk ${employee.name}? Password default akan ditampilkan.`,
+                                                )
+                                            ) {
+                                                router.post(
+                                                    `/employees/${employee.id}/akun`,
+                                                );
                                             }
                                         }}
                                     >
@@ -357,47 +480,48 @@ export default function EmployeeShow({
                                     </Button>
                                 ) : (
                                     <p className="text-xs text-ink-muted">
-                                        Tambahkan email terlebih dahulu untuk membuat akun.
+                                        Tambahkan email terlebih dahulu untuk
+                                        membuat akun.
                                     </p>
                                 )}
                             </div>
                         )}
                     </Card>
 
-                <Card
-                    title="Hak berdasarkan entitas"
-                    subtitle="Ditegakkan server-side, bukan sekadar tampilan"
-                >
-                    <ul className="space-y-3">
-                        <Rule
-                            active={employee.isLeaveEligible}
-                            label="Cuti tahunan"
-                            detail={
-                                employee.isLeaveEligible
-                                    ? `Kuota ${employee.leaveQuota} hari per tahun.`
-                                    : "Pengajuan cuti tahunan ditolak sistem (403)."
-                            }
-                        />
-                        <Rule
-                            active={employee.isBpjsEligible}
-                            label="BPJS Kesehatan & Ketenagakerjaan"
-                            detail={
-                                employee.isBpjsEligible
-                                    ? "Potongan pekerja & kontribusi perusahaan dihitung."
-                                    : "Potongan dan kontribusi BPJS di-set 0 oleh mesin payroll."
-                            }
-                        />
-                        <Rule
-                            active={employee.category !== "mitra"}
-                            label="PPh 21 TER"
-                            detail={
-                                employee.category === "mitra"
-                                    ? "Mitra memakai skema pajak sendiri (PPh 21 bukan pegawai / PPh 23)."
-                                    : "Dipotong dengan tarif efektif bulanan PP 58/2023."
-                            }
-                        />
-                    </ul>
-                </Card>
+                    <Card
+                        title="Hak berdasarkan entitas"
+                        subtitle="Ditegakkan server-side, bukan sekadar tampilan"
+                    >
+                        <ul className="space-y-3">
+                            <Rule
+                                active={employee.isLeaveEligible}
+                                label="Cuti tahunan"
+                                detail={
+                                    employee.isLeaveEligible
+                                        ? `Kuota ${employee.leaveQuota} hari per tahun.`
+                                        : "Pengajuan cuti tahunan ditolak sistem (403)."
+                                }
+                            />
+                            <Rule
+                                active={employee.isBpjsEligible}
+                                label="BPJS Kesehatan & Ketenagakerjaan"
+                                detail={
+                                    employee.isBpjsEligible
+                                        ? "Potongan pekerja & kontribusi perusahaan dihitung."
+                                        : "Potongan dan kontribusi BPJS di-set 0 oleh mesin payroll."
+                                }
+                            />
+                            <Rule
+                                active={employee.category !== "mitra"}
+                                label="PPh 21 TER"
+                                detail={
+                                    employee.category === "mitra"
+                                        ? "Mitra memakai skema pajak sendiri (PPh 21 bukan pegawai / PPh 23)."
+                                        : "Dipotong dengan tarif efektif bulanan PP 58/2023."
+                                }
+                            />
+                        </ul>
+                    </Card>
                 </div>
             </div>
         </AppLayout>

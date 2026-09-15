@@ -1,5 +1,5 @@
 import { Head, router, useForm } from "@inertiajs/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "@/Layouts/AppLayout";
 import Card from "@/Components/Card";
 import ExportMenu from "@/Components/ExportMenu";
@@ -33,6 +33,7 @@ type Item = {
     purchasePrice: number | null;
     purchaseDate: string | null;
     notes: string | null;
+    photoUrl: string | null;
 };
 
 type Loan = {
@@ -40,6 +41,7 @@ type Loan = {
     itemId: number;
     item: string | null;
     itemCode: string | null;
+    itemPhotoUrl: string | null;
     employee: string | null;
     nik: string | null;
     department: string | null;
@@ -88,15 +90,29 @@ type Props = {
 };
 
 /** Transisi status yang dikirim service → aksi yang dipahami controller. */
-const ACTION_OF: Record<string, { key: string; label: string; needsCondition: boolean }> = {
+const ACTION_OF: Record<
+    string,
+    { key: string; label: string; needsCondition: boolean }
+> = {
     approved: { key: "approve", label: "Setujui", needsCondition: false },
     rejected: { key: "reject", label: "Tolak", needsCondition: false },
-    borrowed: { key: "hand_over", label: "Serahkan barang", needsCondition: true },
-    returned: { key: "return", label: "Catat pengembalian", needsCondition: true },
+    borrowed: {
+        key: "hand_over",
+        label: "Serahkan barang",
+        needsCondition: true,
+    },
+    returned: {
+        key: "return",
+        label: "Catat pengembalian",
+        needsCondition: true,
+    },
     lost: { key: "lost", label: "Tandai hilang", needsCondition: false },
 };
 
-const LOAN_TONE: Record<string, "neutral" | "brand" | "good" | "warning" | "critical"> = {
+const LOAN_TONE: Record<
+    string,
+    "neutral" | "brand" | "good" | "warning" | "critical"
+> = {
     requested: "warning",
     approved: "brand",
     borrowed: "brand",
@@ -105,7 +121,24 @@ const LOAN_TONE: Record<string, "neutral" | "brand" | "good" | "warning" | "crit
     lost: "critical",
 };
 
-const emptyItem = {
+type ItemForm = {
+    code: string;
+    name: string;
+    category: string;
+    brand: string;
+    serial_number: string;
+    quantity: number;
+    condition: string;
+    status: string;
+    location: string;
+    purchase_price: string;
+    purchase_date: string;
+    notes: string;
+    photo: File | null;
+    remove_photo: boolean;
+};
+
+const emptyItem: ItemForm = {
     code: "",
     name: "",
     category: "elektronik",
@@ -118,6 +151,8 @@ const emptyItem = {
     purchase_price: "",
     purchase_date: "",
     notes: "",
+    photo: null,
+    remove_photo: false,
 };
 
 export default function InventoryIndex({
@@ -130,11 +165,35 @@ export default function InventoryIndex({
     const [search, setSearch] = useState(filters.search ?? "");
     const [panel, setPanel] = useState<"item" | "loan">("item");
     const [editing, setEditing] = useState<Item | null>(null);
-    const [acting, setActing] = useState<{ loan: number; target: string } | null>(
-        null,
-    );
+    const [acting, setActing] = useState<{
+        loan: number;
+        target: string;
+    } | null>(null);
 
-    const itemForm = useForm({ ...emptyItem });
+    const itemForm = useForm<ItemForm>({ ...emptyItem });
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    // Input berkas tidak terkontrol; remount agar nama berkas ikut bersih.
+    const [photoInputKey, setPhotoInputKey] = useState(0);
+
+    // Pratinjau foto yang baru dipilih; URL objek dilepas saat diganti.
+    useEffect(() => {
+        if (!itemForm.data.photo) {
+            setPhotoPreview(null);
+            setPhotoInputKey((key) => key + 1);
+            return;
+        }
+
+        const url = URL.createObjectURL(itemForm.data.photo);
+        setPhotoPreview(url);
+
+        return () => URL.revokeObjectURL(url);
+    }, [itemForm.data.photo]);
+
+    const currentPhoto =
+        photoPreview ??
+        (editing?.photoUrl && !itemForm.data.remove_photo
+            ? editing.photoUrl
+            : null);
     const loanForm = useForm({
         employee_id: "",
         inventory_item_id: "",
@@ -146,7 +205,10 @@ export default function InventoryIndex({
 
     // Penolakan transisi & stok kurang dilaporkan service di bawah kunci
     // "status" yang tidak ada di data form, jadi dibaca lewat peta longgar.
-    const actionErrors = actionForm.errors as Record<string, string | undefined>;
+    const actionErrors = actionForm.errors as Record<
+        string,
+        string | undefined
+    >;
 
     function applyFilter(patch: Record<string, string | null>) {
         router.get(
@@ -173,12 +235,19 @@ export default function InventoryIndex({
                 item.purchasePrice !== null ? String(item.purchasePrice) : "",
             purchase_date: item.purchaseDate ?? "",
             notes: item.notes ?? "",
+            photo: null,
+            remove_photo: false,
         });
+        itemForm.clearErrors();
     }
 
     function submitItem() {
         if (editing) {
-            itemForm.patch(`/inventaris/aset/${editing.id}`, {
+            // Unggahan berkas butuh multipart, yang hanya dikirim lewat POST;
+            // method PATCH disamarkan lewat _method.
+            itemForm.transform((data) => ({ ...data, _method: "patch" }));
+            itemForm.post(`/inventaris/aset/${editing.id}`, {
+                forceFormData: true,
                 preserveScroll: true,
                 onSuccess: () => {
                     setEditing(null);
@@ -188,7 +257,9 @@ export default function InventoryIndex({
             return;
         }
 
+        itemForm.transform((data) => data);
         itemForm.post("/inventaris/aset", {
+            forceFormData: true,
             preserveScroll: true,
             onSuccess: () => itemForm.setData({ ...emptyItem }),
         });
@@ -325,21 +396,27 @@ export default function InventoryIndex({
                                             className="rounded-xl border border-hairline p-4"
                                         >
                                             <div className="flex flex-wrap items-start justify-between gap-3">
-                                                <div className="min-w-0">
-                                                    <p className="font-medium text-ink">
-                                                        {loan.item}
-                                                        <span className="ml-1.5 text-xs font-normal text-ink-muted">
-                                                            ×{loan.quantity}
-                                                        </span>
-                                                    </p>
-                                                    <p className="mt-0.5 text-xs text-ink-muted">
-                                                        {loan.itemCode} ·{" "}
-                                                        {loan.employee} ·{" "}
-                                                        {loan.nik}
-                                                        {loan.department
-                                                            ? ` · ${loan.department}`
-                                                            : ""}
-                                                    </p>
+                                                <div className="flex min-w-0 items-start gap-3">
+                                                    <AssetThumb
+                                                        url={loan.itemPhotoUrl}
+                                                        name={loan.item ?? ""}
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-ink">
+                                                            {loan.item}
+                                                            <span className="ml-1.5 text-xs font-normal text-ink-muted">
+                                                                ×{loan.quantity}
+                                                            </span>
+                                                        </p>
+                                                        <p className="mt-0.5 text-xs text-ink-muted">
+                                                            {loan.itemCode} ·{" "}
+                                                            {loan.employee} ·{" "}
+                                                            {loan.nik}
+                                                            {loan.department
+                                                                ? ` · ${loan.department}`
+                                                                : ""}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center gap-1.5">
                                                     {loan.isOverdue && (
@@ -562,7 +639,8 @@ export default function InventoryIndex({
                                     value={filters.category ?? ""}
                                     onChange={(event) =>
                                         applyFilter({
-                                            category: event.target.value || null,
+                                            category:
+                                                event.target.value || null,
                                         })
                                     }
                                 >
@@ -624,15 +702,25 @@ export default function InventoryIndex({
                                                     className="border-b border-hairline last:border-0"
                                                 >
                                                     <td className="py-2.5">
-                                                        <p className="font-medium text-ink">
-                                                            {item.name}
-                                                        </p>
-                                                        <p className="tabular text-[11px] text-ink-muted">
-                                                            {item.code}
-                                                            {item.serialNumber
-                                                                ? ` · SN ${item.serialNumber}`
-                                                                : ""}
-                                                        </p>
+                                                        <div className="flex items-center gap-3">
+                                                            <AssetThumb
+                                                                url={
+                                                                    item.photoUrl
+                                                                }
+                                                                name={item.name}
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <p className="font-medium text-ink">
+                                                                    {item.name}
+                                                                </p>
+                                                                <p className="tabular text-[11px] text-ink-muted">
+                                                                    {item.code}
+                                                                    {item.serialNumber
+                                                                        ? ` · SN ${item.serialNumber}`
+                                                                        : ""}
+                                                                </p>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                     <td className="py-2.5 text-ink-soft">
                                                         {item.category}
@@ -933,6 +1021,67 @@ export default function InventoryIndex({
                                         </Field>
                                     </div>
 
+                                    <Field
+                                        label="Foto aset"
+                                        error={itemForm.errors.photo}
+                                        hint="JPG, PNG, atau WEBP. Maksimal 2 MB."
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            {currentPhoto ? (
+                                                <img
+                                                    src={currentPhoto}
+                                                    alt="Pratinjau foto aset"
+                                                    className="h-20 w-20 shrink-0 rounded-lg border border-hairline object-cover"
+                                                />
+                                            ) : (
+                                                <span className="grid h-20 w-20 shrink-0 place-items-center rounded-lg border border-dashed border-hairline text-ink-muted">
+                                                    <IconBox className="h-6 w-6" />
+                                                </span>
+                                            )}
+                                            <div className="min-w-0 flex-1 space-y-2">
+                                                <input
+                                                    key={photoInputKey}
+                                                    type="file"
+                                                    accept=".jpg,.jpeg,.png,.webp"
+                                                    onChange={(event) => {
+                                                        const file =
+                                                            event.target
+                                                                .files?.[0] ??
+                                                            null;
+                                                        itemForm.setData(
+                                                            (data) => ({
+                                                                ...data,
+                                                                photo: file,
+                                                                remove_photo: false,
+                                                            }),
+                                                        );
+                                                    }}
+                                                    className="w-full rounded-lg border border-hairline bg-surface px-3 py-2 text-xs text-ink-soft file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-xs file:font-medium file:text-brand-600"
+                                                />
+                                                {currentPhoto && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            itemForm.setData(
+                                                                (data) => ({
+                                                                    ...data,
+                                                                    photo: null,
+                                                                    remove_photo:
+                                                                        Boolean(
+                                                                            editing?.photoUrl,
+                                                                        ),
+                                                                }),
+                                                            )
+                                                        }
+                                                        className="text-[11px] font-medium text-[#d03b3b]"
+                                                    >
+                                                        Hapus foto
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Field>
+
                                     <Field label="Catatan">
                                         <Textarea
                                             rows={2}
@@ -1154,5 +1303,22 @@ export default function InventoryIndex({
                 </div>
             </div>
         </AppLayout>
+    );
+}
+
+function AssetThumb({ url, name }: { url: string | null; name: string }) {
+    return url ? (
+        <a href={url} target="_blank" rel="noreferrer" className="shrink-0">
+            <img
+                src={url}
+                alt={name}
+                loading="lazy"
+                className="h-10 w-10 rounded-lg border border-hairline object-cover"
+            />
+        </a>
+    ) : (
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface-soft text-ink-muted">
+            <IconBox className="h-4 w-4" />
+        </span>
     );
 }

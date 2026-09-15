@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CareerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeDocumentController;
 use App\Http\Controllers\EmploymentTypeController;
 use App\Http\Controllers\ExitController;
 use App\Http\Controllers\InventoryController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MitraPayrollSchemaController;
 use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecruitmentController;
 use App\Http\Controllers\SalesController;
 use Illuminate\Support\Facades\Route;
@@ -105,6 +107,27 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
         'payroll.mine',
     );
 
+    // Data diri & dokumen kelengkapan milik sendiri.
+    Route::get('/data-diri', [ProfileController::class, 'edit'])->name(
+        'profile.edit',
+    );
+    Route::put('/data-diri', [ProfileController::class, 'update'])->name(
+        'profile.update',
+    );
+    Route::post('/data-diri/dokumen', [
+        ProfileController::class,
+        'storeDocument',
+    ])->name('profile.documents.store');
+    // Dokumen berada di disk privat; pemilik atau HR dicek per dokumen.
+    Route::get('/dokumen-karyawan/{document}', [
+        EmployeeDocumentController::class,
+        'show',
+    ])->name('employee-documents.show');
+    Route::delete('/dokumen-karyawan/{document}', [
+        EmployeeDocumentController::class,
+        'destroy',
+    ])->name('employee-documents.destroy');
+
     // Peminjaman inventaris — pengajuan mandiri.
     Route::get('/inventaris-saya', [InventoryController::class, 'mine'])->name(
         'inventory.mine',
@@ -117,6 +140,10 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
         InventoryController::class,
         'cancelLoan',
     ])->name('inventory.cancel');
+    Route::get('/inventaris/aset/{item}/foto', [
+        InventoryController::class,
+        'photo',
+    ])->name('inventory.item.photo');
 
     // Knowledge Center — dapat dibaca semua role, isinya disaring per audiens.
     Route::get('/knowledge', [KnowledgeController::class, 'index'])->name(
@@ -397,6 +424,10 @@ Route::middleware(['auth', 'force_password_change'])->group(function () {
             EmployeeController::class,
             'resetPassword',
         ])->name('employees.reset-password');
+        Route::post('/employees/{employee}/dokumen', [
+            EmployeeDocumentController::class,
+            'store',
+        ])->name('employees.documents.store');
         Route::delete('/employees/{employee}/akun', [
             EmployeeController::class,
             'revokeAccount',

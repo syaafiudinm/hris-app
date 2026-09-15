@@ -34,9 +34,14 @@ const navigation: NavGroup[] = [
     {
         heading: "Portal Saya",
         items: [
+            { label: "Data Diri", href: "/data-diri", icon: IconUsers },
             { label: "Absensi Saya", href: "/absensi-saya", icon: IconClock },
             { label: "Cuti & Izin Saya", href: "/cuti-saya", icon: IconBook },
-            { label: "Slip Gaji Saya", href: "/slip-gaji-saya", icon: IconWallet },
+            {
+                label: "Slip Gaji Saya",
+                href: "/slip-gaji-saya",
+                icon: IconWallet,
+            },
             {
                 label: "Pinjam Inventaris",
                 href: "/inventaris-saya",
@@ -225,7 +230,9 @@ export default function AppLayout({
                                         <li key={item.label}>
                                             <Link
                                                 href={item.href}
-                                                onClick={() => setNavOpen(false)}
+                                                onClick={() =>
+                                                    setNavOpen(false)
+                                                }
                                                 aria-current={
                                                     active ? "page" : undefined
                                                 }
@@ -255,7 +262,9 @@ export default function AppLayout({
                                     {auth?.user?.name ?? "Tamu"}
                                 </p>
                                 <p className="truncate text-[11px] text-ink-muted">
-                                    {auth?.user ? ROLE_LABELS[auth.user.role] : "-"}
+                                    {auth?.user
+                                        ? ROLE_LABELS[auth.user.role]
+                                        : "-"}
                                 </p>
                             </div>
                         </div>
@@ -326,6 +335,26 @@ export default function AppLayout({
 
                 <main className="px-5 py-6 sm:px-8">
                     <FlashMessages />
+                    {auth?.employee &&
+                        auth.employee.profileCompletion < 100 &&
+                        !currentUrl.startsWith("/data-diri") && (
+                            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#f3dfb0] bg-[#fdf6e6] px-4 py-3">
+                                <p className="text-xs text-[#8a6100]">
+                                    Data diri & dokumen Anda baru{" "}
+                                    <span className="font-semibold">
+                                        {auth.employee.profileCompletion}%
+                                    </span>{" "}
+                                    lengkap. Mohon lengkapi untuk keperluan
+                                    administrasi kepegawaian.
+                                </p>
+                                <Link
+                                    href="/data-diri"
+                                    className="rounded-lg bg-surface px-3 py-1.5 text-[11px] font-medium text-[#8a6100] transition hover:bg-white"
+                                >
+                                    Lengkapi sekarang
+                                </Link>
+                            </div>
+                        )}
                     {children}
                 </main>
             </div>

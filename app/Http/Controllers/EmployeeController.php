@@ -6,7 +6,9 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmploymentType;
 use App\Services\AccountProvisioningService;
+use App\Services\EmployeeDocumentService;
 use App\Services\ExportService;
+use App\Support\EmployeeProfile;
 use App\Support\TerTariff;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -120,6 +122,8 @@ class EmployeeController extends Controller
                 'isBpjsEligible' => $employee->isBpjsEligible(),
                 'leaveQuota' => $employee->employmentType?->annual_leave_quota ?? 0,
             ],
+            'personal' => EmployeeProfile::present($employee),
+            'documents' => app(EmployeeDocumentService::class)->present($employee),
             'mitraSchema' => $employee->mitraPayrollSchema ? [
                 'schemaType' => $employee->mitraPayrollSchema->schema_type,
                 'rate' => (float) $employee->mitraPayrollSchema->rate_per_unit,
@@ -175,6 +179,7 @@ class EmployeeController extends Controller
                 'contract_end' => $employee->contract_end?->toDateString(),
                 'basic_salary' => (float) $employee->basic_salary,
                 'status' => $employee->status,
+                ...EmployeeProfile::formValues($employee),
             ],
             'options' => $this->options(),
         ]);
@@ -205,6 +210,9 @@ class EmployeeController extends Controller
         if ($employee->user_id) {
             app(AccountProvisioningService::class)->revoke($employee);
         }
+
+        // Baris dokumen ikut terhapus lewat cascade, tapi berkasnya tidak.
+        $employee->documents->each(fn ($document) => app(EmployeeDocumentService::class)->delete($document));
 
         $employee->delete();
 
@@ -260,6 +268,11 @@ class EmployeeController extends Controller
      */
     public function export(Request $request, ExportService $exporter)
     {
+        $format = (string) $request->string('format', 'xlsx');
+        // Kolom data diri hanya untuk spreadsheet; di PDF A4 tabelnya
+        // terlalu lebar untuk dibaca.
+        $withPersonal = $format !== 'pdf';
+
         $rows = $this->filtered($request)
             ->with(['employmentType', 'department'])
             ->orderBy('full_name')
@@ -267,8 +280,24 @@ class EmployeeController extends Controller
             ->map(fn (Employee $employee) => [
                 $employee->nik,
                 $employee->full_name,
+                ...($withPersonal ? [
+                    $employee->ktp_number,
+                    $employee->birth_place,
+                    $employee->birth_date?->format('d/m/Y'),
+                    Employee::GENDERS[$employee->gender] ?? null,
+                    Employee::RELIGIONS[$employee->religion] ?? null,
+                    Employee::MARITAL_STATUSES[$employee->marital_status] ?? null,
+                    $employee->dependents_count,
+                    $employee->ktp_address,
+                    $employee->domicile_address,
+                ] : []),
                 $employee->email,
                 $employee->phone,
+                ...($withPersonal ? [
+                    $employee->emergency_contact_name,
+                    $employee->emergency_contact_relation,
+                    $employee->emergency_contact_phone,
+                ] : []),
                 $employee->position,
                 $employee->department?->name,
                 $employee->employmentType?->name,
@@ -284,12 +313,18 @@ class EmployeeController extends Controller
         return $exporter->download(
             $request,
             module: 'Data Induk Tenaga Kerja',
-            format: (string) $request->string('format', 'xlsx'),
+            format: $format,
             title: 'Data Induk Tenaga Kerja',
             headings: [
-                'NIK', 'Nama Lengkap', 'Email', 'Telepon', 'Jabatan', 'Divisi',
-                'Entitas Kerja', 'Kontrak Mulai', 'Kontrak Berakhir', 'Gaji Pokok',
-                'BPJS', 'Hak Cuti', 'Status',
+                'NIK', 'Nama Lengkap',
+                ...($withPersonal ? [
+                    'No KTP', 'Tempat Lahir', 'Tanggal Lahir', 'Jenis Kelamin', 'Agama',
+                    'Status Pernikahan', 'Tanggungan se-KK', 'Alamat KTP', 'Alamat Domisili',
+                ] : []),
+                'Email', 'No WhatsApp',
+                ...($withPersonal ? ['Kontak Darurat', 'Hubungan', 'No Kontak Darurat'] : []),
+                'Jabatan', 'Divisi', 'Entitas Kerja', 'Kontrak Mulai', 'Kontrak Berakhir',
+                'Gaji Pokok', 'BPJS', 'Hak Cuti', 'Status',
             ],
             rows: $rows,
             filters: $this->filterValues($request),
@@ -369,6 +404,7 @@ class EmployeeController extends Controller
             'departments' => Department::orderBy('name')->get(['id', 'name'])->all(),
             'statuses' => ['active', 'inactive', 'expired', 'resigned'],
             'ptkpStatuses' => TerTariff::options(),
+            ...EmployeeProfile::options(),
         ];
     }
 
@@ -400,6 +436,8 @@ class EmployeeController extends Controller
             'contract_end' => ['nullable', 'date', 'after_or_equal:contract_start'],
             'basic_salary' => ['required', 'numeric', 'min:0'],
             'status' => ['required', Rule::in(['active', 'inactive', 'expired', 'resigned'])],
-        ]);
+            // Data diri boleh kosong di sini — dilengkapi karyawan sendiri.
+            ...EmployeeProfile::rules($employee, required: false),
+        ], EmployeeProfile::messages());
     }
 }

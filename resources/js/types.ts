@@ -15,6 +15,8 @@ export type AuthEmployee = {
     category: "probation" | "pkwt" | "mitra" | null;
     isLeaveEligible: boolean;
     isBpjsEligible: boolean;
+    /** Persentase kelengkapan data diri & dokumen wajib. */
+    profileCompletion: number;
 };
 
 export type PageProps = {

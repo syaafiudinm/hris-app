@@ -261,11 +261,11 @@ class HrisDemoSeeder extends Seeder
                 'published_at' => $today->subDays(6),
             ],
             [
-                'title' => 'Sprint Review Divisi Teknologi',
-                'body' => 'Sprint review diadakan setiap Jumat pukul 15.00 di ruang rapat lantai 3. Kehadiran seluruh anggota tim diharapkan.',
+                'title' => 'Evaluasi Mingguan Divisi Sales',
+                'body' => 'Evaluasi pencapaian penjualan diadakan setiap Jumat pukul 15.00 di ruang rapat. Kehadiran seluruh anggota tim diharapkan.',
                 'category' => 'info',
                 'target_type' => 'department',
-                'target_department_id' => $this->departments['TECH']->id,
+                'target_department_id' => $this->departments['SALES']->id,
                 'is_pinned' => false,
                 'published_at' => $today->subDays(2),
             ],
@@ -290,7 +290,7 @@ class HrisDemoSeeder extends Seeder
             ['title' => 'Peraturan Perusahaan 2026', 'doc_type' => 'peraturan', 'target_type' => 'all', 'description' => 'Peraturan induk ketenagakerjaan yang berlaku di perusahaan.'],
             ['title' => 'Panduan Absensi GPS', 'doc_type' => 'panduan', 'target_type' => 'all', 'description' => 'Langkah clock-in, radius kantor, dan penanganan kendala.'],
             ['title' => 'Formulir Klaim Reimbursement', 'doc_type' => 'formulir', 'target_type' => 'all', 'description' => 'Diisi dan dilampirkan bersama bukti pembayaran.'],
-            ['title' => 'SOP Onboarding Karyawan Baru', 'doc_type' => 'sop', 'target_type' => 'department', 'target_department_id' => $this->departments['HRD']->id, 'description' => 'Checklist internal tim Human Capital.'],
+            ['title' => 'SOP Onboarding Karyawan Baru', 'doc_type' => 'sop', 'target_type' => 'department', 'target_department_id' => $this->departments['HRGA']->id, 'description' => 'Checklist internal tim HRGA.'],
             ['title' => 'Panduan Kemitraan & Invoice', 'doc_type' => 'panduan', 'target_type' => 'employment_category', 'target_category' => 'mitra', 'description' => 'Ketentuan penagihan dan pajak untuk mitra.'],
         ];
 
@@ -340,11 +340,12 @@ class HrisDemoSeeder extends Seeder
     private function seedDepartments(): void
     {
         $definitions = [
-            ['code' => 'TECH', 'name' => 'Teknologi', 'location' => 'Jakarta'],
-            ['code' => 'OPS', 'name' => 'Operasional', 'location' => 'Jakarta'],
-            ['code' => 'FIN', 'name' => 'Keuangan', 'location' => 'Jakarta'],
-            ['code' => 'MKT', 'name' => 'Marketing', 'location' => 'Bandung'],
-            ['code' => 'HRD', 'name' => 'Human Capital', 'location' => 'Jakarta'],
+            ['code' => 'SALES', 'name' => 'Sales', 'location' => 'Makassar'],
+            ['code' => 'AFTERSALES', 'name' => 'Aftersales', 'location' => 'Makassar'],
+            ['code' => 'HRGA', 'name' => 'HRGA', 'location' => 'Makassar'],
+            ['code' => 'FAT', 'name' => 'FAT', 'location' => 'Makassar'],
+            ['code' => 'MKT', 'name' => 'Marketing', 'location' => 'Makassar'],
+            ['code' => 'OPS', 'name' => 'Operasional', 'location' => 'Makassar'],
         ];
 
         foreach ($definitions as $definition) {
@@ -383,11 +384,12 @@ class HrisDemoSeeder extends Seeder
         $lastNames = ['Pratama', 'Wijaya', 'Santoso', 'Nugroho', 'Halim', 'Kusuma', 'Saputra', 'Ramadhan', 'Lestari', 'Anggraini', 'Firmansyah', 'Maulana'];
 
         $positions = [
-            'TECH' => ['Backend Engineer', 'Frontend Engineer', 'QA Engineer', 'DevOps Engineer', 'Product Designer'],
+            'SALES' => ['Sales Executive', 'Sales Consultant', 'Sales Supervisor'],
+            'AFTERSALES' => ['Service Advisor', 'Mekanik', 'Part Admin'],
+            'HRGA' => ['HR Generalist', 'Recruiter', 'General Affair'],
+            'FAT' => ['Finance Staff', 'Accounting Officer', 'Tax Analyst'],
+            'MKT' => ['Digital Marketing', 'Content Strategist', 'Event Specialist'],
             'OPS' => ['Operations Staff', 'Warehouse Supervisor', 'Logistics Officer'],
-            'FIN' => ['Finance Staff', 'Accounting Officer', 'Tax Analyst'],
-            'MKT' => ['Digital Marketing', 'Content Strategist', 'Sales Executive'],
-            'HRD' => ['HR Generalist', 'Recruiter', 'People Ops'],
         ];
 
         // Komposisi entitas kerja: mayoritas PKWT, sisanya probation & mitra.
@@ -455,7 +457,7 @@ class HrisDemoSeeder extends Seeder
         // Akun HR (Super Admin) sebagai pemilik dashboard.
         $hr = Employee::create([
             'employment_type_id' => $this->types['PKWT12']->id,
-            'department_id' => $this->departments['HRD']->id,
+            'department_id' => $this->departments['HRGA']->id,
             'nik' => sprintf('EMP-%04d', $counter),
             'full_name' => 'Syaafiudin M',
             'email' => 'hr@perusahaan.co.id',
@@ -712,7 +714,7 @@ class HrisDemoSeeder extends Seeder
             [
                 'title' => 'Senior Backend Engineer',
                 'offered_category' => 'pkwt',
-                'dept' => 'TECH',
+                'dept' => 'OPS',
                 'quota' => 2,
                 'description' => "Kami mencari Senior Backend Engineer yang berpengalaman dalam membangun dan mengelola arsitektur sistem backend skala besar.\n\nAnda akan bertanggung jawab atas pengembangan API, optimasi performa, dan kolaborasi lintas tim untuk menghasilkan produk berkualitas tinggi.",
                 'requirements' => "- Minimal 3 tahun pengalaman di bidang backend development\n- Menguasai PHP (Laravel) atau Go\n- Familiar dengan database relasional (MySQL/PostgreSQL)\n- Pengalaman dengan Docker dan CI/CD\n- Kemampuan komunikasi yang baik",
@@ -720,7 +722,7 @@ class HrisDemoSeeder extends Seeder
             [
                 'title' => 'UI/UX Designer (Freelance)',
                 'offered_category' => 'mitra',
-                'dept' => 'TECH',
+                'dept' => 'MKT',
                 'quota' => 1,
                 'description' => 'Posisi freelance untuk UI/UX Designer yang akan bekerja pada proyek-proyek desain interface internal dan eksternal.',
                 'requirements' => "- Portofolio desain UI/UX yang kuat\n- Menguasai Figma\n- Memahami prinsip usability dan accessibility\n- Dapat bekerja secara remote",
@@ -728,7 +730,7 @@ class HrisDemoSeeder extends Seeder
             [
                 'title' => 'Finance Staff',
                 'offered_category' => 'probation',
-                'dept' => 'FIN',
+                'dept' => 'FAT',
                 'quota' => 1,
                 'description' => 'Bergabunglah dengan tim keuangan kami sebagai Finance Staff untuk menangani pembukuan, laporan keuangan, dan administrasi pajak.',
                 'requirements' => "- S1 Akuntansi atau Keuangan\n- Memahami standar PSAK\n- Teliti dan detail-oriented\n- Fresh graduate dipersilakan melamar",
