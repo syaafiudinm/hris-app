@@ -24,6 +24,14 @@ class Attendance extends Model
         'verified_by',
         'verified_at',
         'verification_note',
+        'clock_out_lat',
+        'clock_out_long',
+        'clock_out_photo',
+        'clock_out_method',
+        'clock_out_distance',
+        'clock_out_office',
+        'is_clock_out_outside_radius',
+        'clock_out_note',
         'is_fake_gps',
         'status',
         'work_minutes',
@@ -52,6 +60,7 @@ class Attendance extends Model
             'verified_at' => 'datetime',
             'is_fake_gps' => 'boolean',
             'is_outside_radius' => 'boolean',
+            'is_clock_out_outside_radius' => 'boolean',
         ];
     }
 

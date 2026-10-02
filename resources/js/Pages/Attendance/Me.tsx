@@ -53,6 +53,8 @@ type Props = {
     }[];
 };
 
+type Action = "in" | "out";
+
 type Mode = "live" | "upload";
 
 type Position = {
@@ -71,15 +73,18 @@ export default function AttendanceMe({
     const streamRef = useRef<MediaStream | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
 
-    const [mode, setMode] = useState<Mode>("live");
+    // Alur bertahap: pilih clock in / clock out dulu, baru cara fotonya.
+    const [action, setAction] = useState<Action | null>(null);
+    const [mode, setMode] = useState<Mode | null>(null);
     const [position, setPosition] = useState<Position | null>(null);
     const [geoError, setGeoError] = useState<string | null>(null);
     const [cameraOn, setCameraOn] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [photo, setPhoto] = useState<string | null>(null);
-    const [upload, setUpload] = useState<{ file: File; preview: string } | null>(
-        null,
-    );
+    const [upload, setUpload] = useState<{
+        file: File;
+        preview: string;
+    } | null>(null);
     const [note, setNote] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
@@ -91,13 +96,44 @@ export default function AttendanceMe({
         ? nearest.distance <= nearest.office.radius_meters
         : false;
 
+    const clockInDone = Boolean(today.clockIn);
+    const clockOutDone = Boolean(today.clockOut);
+    const actionLabel = action === "out" ? "clock out" : "clock in";
+
     // Mode kamera wajib di dalam radius; mode unggah tidak diblokir jarak,
     // tetapi wajib menyertakan alasan karena akan diverifikasi HR.
-    const canClockIn = today.clockIn
-        ? false
-        : mode === "live"
-          ? Boolean(position && photo && insideRadius)
-          : Boolean(position && upload && note.trim());
+    const actionAvailable =
+        action === "in"
+            ? !clockInDone
+            : action === "out" && clockInDone && !clockOutDone;
+    const canSubmit =
+        actionAvailable &&
+        (mode === "live"
+            ? Boolean(position && photo && insideRadius)
+            : mode === "upload"
+              ? Boolean(position && upload && note.trim())
+              : false);
+
+    function resetCapture() {
+        stopCamera();
+        setPhoto(null);
+        setUpload(null);
+        setNote("");
+        if (fileRef.current) fileRef.current.value = "";
+    }
+
+    function chooseAction(next: Action) {
+        if (next === action) return;
+        resetCapture();
+        setAction(next);
+        setMode(null);
+    }
+
+    function chooseMode(next: Mode) {
+        if (next === mode) return;
+        resetCapture();
+        setMode(next);
+    }
 
     function requestLocation() {
         setGeoError(null);
@@ -178,8 +214,8 @@ export default function AttendanceMe({
         setUpload({ file, preview: URL.createObjectURL(file) });
     }
 
-    function submitClockIn() {
-        if (!position) return;
+    function submit() {
+        if (!position || !action || !mode) return;
 
         setSubmitting(true);
 
@@ -194,7 +230,9 @@ export default function AttendanceMe({
         };
 
         router.post(
-            "/absensi-saya/clock-in",
+            action === "in"
+                ? "/absensi-saya/clock-in"
+                : "/absensi-saya/clock-out",
             mode === "live"
                 ? { ...shared, photo }
                 : { ...shared, photo_file: upload?.file, note },
@@ -202,31 +240,20 @@ export default function AttendanceMe({
                 // Berkas unggahan memaksa multipart; Inertia menanganinya
                 // otomatis begitu ada File di payload.
                 forceFormData: mode === "upload",
+                onSuccess: () => {
+                    setAction(null);
+                    setMode(null);
+                },
                 onFinish: () => {
                     setSubmitting(false);
-                    setPhoto(null);
-                    setUpload(null);
-                    setNote("");
-                    if (fileRef.current) fileRef.current.value = "";
+                    resetCapture();
                 },
             },
         );
     }
 
     return (
-        <AppLayout
-            title="Absensi Saya"
-            subtitle={today.date}
-            actions={
-                today.clockIn && !today.clockOut ? (
-                    <Button
-                        onClick={() => router.post("/absensi-saya/clock-out")}
-                    >
-                        Clock out
-                    </Button>
-                ) : undefined
-            }
-        >
+        <AppLayout title="Absensi Saya" subtitle={today.date}>
             <Head title="Absensi Saya" />
 
             <div className="grid gap-5 xl:grid-cols-3">
@@ -319,258 +346,331 @@ export default function AttendanceMe({
                         )}
                     </Card>
 
-                    {!today.clockIn && (
+                    {!(clockInDone && clockOutDone) && (
                         <Card
-                            title="Clock in"
-                            subtitle="Pilih cara absen yang sesuai dengan kondisi Anda hari ini"
+                            title="Absen"
+                            subtitle="Pilih jenis absen, lalu cara pengambilan fotonya"
                         >
-                            {/* Dua opsi absensi. */}
+                            {/* Langkah 1 — jenis absen. */}
+                            <p className="mb-2 text-xs font-medium text-ink">
+                                1. Mau absen apa?
+                            </p>
                             <div className="mb-5 grid gap-2 sm:grid-cols-2">
                                 <ModeCard
-                                    active={mode === "live"}
-                                    icon={<IconCamera className="h-4 w-4" />}
-                                    title="Kamera langsung"
-                                    description="Selfie diambil saat itu juga. Wajib berada di dalam radius kantor, langsung sah tanpa persetujuan."
-                                    onClick={() => setMode("live")}
+                                    active={action === "in"}
+                                    disabled={clockInDone}
+                                    icon={<IconClock className="h-4 w-4" />}
+                                    title="Clock in"
+                                    description={
+                                        clockInDone
+                                            ? `Sudah clock in pukul ${today.clockIn}.`
+                                            : "Absen masuk saat mulai bekerja. Jam masuk 08:00."
+                                    }
+                                    onClick={() => chooseAction("in")}
                                 />
                                 <ModeCard
-                                    active={mode === "upload"}
-                                    icon={<IconUpload className="h-4 w-4" />}
-                                    title="Unggah foto"
-                                    description="Untuk kerja lapangan atau saat kamera tidak bisa dipakai. Boleh di luar radius, tetapi diverifikasi HR dulu."
-                                    onClick={() => setMode("upload")}
+                                    active={action === "out"}
+                                    disabled={!clockInDone || clockOutDone}
+                                    icon={<IconCheck className="h-4 w-4" />}
+                                    title="Clock out"
+                                    description={
+                                        clockInDone
+                                            ? "Absen pulang saat selesai bekerja. Jam kerja dihitung dari clock in."
+                                            : "Lakukan clock in terlebih dahulu."
+                                    }
+                                    onClick={() => chooseAction("out")}
                                 />
                             </div>
 
-                            <div className="grid gap-5 sm:grid-cols-2">
-                                {/* Langkah 1 — lokasi */}
-                                <div>
+                            {/* Langkah 2 — cara foto, muncul setelah jenis absen dipilih. */}
+                            {action && (
+                                <>
                                     <p className="mb-2 text-xs font-medium text-ink">
-                                        1. Verifikasi lokasi
+                                        2. Ambil foto atau unggah?
                                     </p>
+                                    <div className="mb-5 grid gap-2 sm:grid-cols-2">
+                                        <ModeCard
+                                            active={mode === "live"}
+                                            icon={
+                                                <IconCamera className="h-4 w-4" />
+                                            }
+                                            title="Kamera langsung"
+                                            description="Selfie diambil saat itu juga. Wajib berada di dalam radius kantor, langsung sah tanpa persetujuan."
+                                            onClick={() => chooseMode("live")}
+                                        />
+                                        <ModeCard
+                                            active={mode === "upload"}
+                                            icon={
+                                                <IconUpload className="h-4 w-4" />
+                                            }
+                                            title="Unggah foto"
+                                            description="Untuk kerja lapangan atau saat kamera tidak bisa dipakai. Boleh di luar radius, tetapi diverifikasi HR dulu."
+                                            onClick={() => chooseMode("upload")}
+                                        />
+                                    </div>
+                                </>
+                            )}
 
-                                    {position ? (
-                                        <div className="rounded-xl border border-hairline bg-surface-soft p-3">
-                                            <p className="tabular text-xs text-ink">
-                                                {position.latitude.toFixed(6)},{" "}
-                                                {position.longitude.toFixed(6)}
+                            {action && mode && (
+                                <>
+                                    <div className="grid gap-5 border-t border-hairline pt-5 sm:grid-cols-2">
+                                        {/* Langkah 3 — lokasi */}
+                                        <div>
+                                            <p className="mb-2 text-xs font-medium text-ink">
+                                                3. Verifikasi lokasi
                                             </p>
-                                            <p className="mt-1 text-[11px] text-ink-muted">
-                                                Akurasi ±
-                                                {Math.round(position.accuracy)} m
-                                            </p>
-                                            {nearest && (
-                                                <p
-                                                    className="mt-2 flex items-center gap-1.5 text-[11px] font-medium"
-                                                    style={{
-                                                        color: insideRadius
-                                                            ? "#0a7a0a"
-                                                            : mode === "upload"
-                                                              ? "#8a6100"
-                                                              : "#b53232",
-                                                    }}
-                                                >
-                                                    {insideRadius ? (
-                                                        <IconCheck className="h-3.5 w-3.5" />
-                                                    ) : (
-                                                        <IconAlert className="h-3.5 w-3.5" />
+
+                                            {position ? (
+                                                <div className="rounded-xl border border-hairline bg-surface-soft p-3">
+                                                    <p className="tabular text-xs text-ink">
+                                                        {position.latitude.toFixed(
+                                                            6,
+                                                        )}
+                                                        ,{" "}
+                                                        {position.longitude.toFixed(
+                                                            6,
+                                                        )}
+                                                    </p>
+                                                    <p className="mt-1 text-[11px] text-ink-muted">
+                                                        Akurasi ±
+                                                        {Math.round(
+                                                            position.accuracy,
+                                                        )}{" "}
+                                                        m
+                                                    </p>
+                                                    {nearest && (
+                                                        <p
+                                                            className="mt-2 flex items-center gap-1.5 text-[11px] font-medium"
+                                                            style={{
+                                                                color: insideRadius
+                                                                    ? "#0a7a0a"
+                                                                    : mode ===
+                                                                        "upload"
+                                                                      ? "#8a6100"
+                                                                      : "#b53232",
+                                                            }}
+                                                        >
+                                                            {insideRadius ? (
+                                                                <IconCheck className="h-3.5 w-3.5" />
+                                                            ) : (
+                                                                <IconAlert className="h-3.5 w-3.5" />
+                                                            )}
+                                                            {Math.round(
+                                                                nearest.distance,
+                                                            )}{" "}
+                                                            m dari{" "}
+                                                            {
+                                                                nearest.office
+                                                                    .name
+                                                            }
+                                                            {insideRadius
+                                                                ? " (dalam radius)"
+                                                                : ` (radius ${nearest.office.radius_meters} m)`}
+                                                        </p>
                                                     )}
-                                                    {Math.round(nearest.distance)} m
-                                                    dari {nearest.office.name}
-                                                    {insideRadius
-                                                        ? " (dalam radius)"
-                                                        : ` (radius ${nearest.office.radius_meters} m)`}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-ink-muted">
+                                                    Lokasi belum diambil.
                                                 </p>
                                             )}
+
+                                            {geoError && (
+                                                <p className="mt-2 text-[11px] text-[#b53232]">
+                                                    {geoError}
+                                                </p>
+                                            )}
+
+                                            <Button
+                                                variant="secondary"
+                                                onClick={requestLocation}
+                                                className="mt-3"
+                                            >
+                                                {position
+                                                    ? "Perbarui lokasi"
+                                                    : "Ambil lokasi"}
+                                            </Button>
                                         </div>
-                                    ) : (
-                                        <p className="text-xs text-ink-muted">
-                                            Lokasi belum diambil.
-                                        </p>
-                                    )}
 
-                                    {geoError && (
-                                        <p className="mt-2 text-[11px] text-[#b53232]">
-                                            {geoError}
-                                        </p>
-                                    )}
+                                        {/* Langkah 4 — foto, sesuai opsi yang dipilih */}
+                                        <div>
+                                            <p className="mb-2 text-xs font-medium text-ink">
+                                                4.{" "}
+                                                {mode === "live"
+                                                    ? "Foto selfie"
+                                                    : "Unggah foto"}
+                                            </p>
 
-                                    <Button
-                                        variant="secondary"
-                                        onClick={requestLocation}
-                                        className="mt-3"
-                                    >
-                                        {position
-                                            ? "Perbarui lokasi"
-                                            : "Ambil lokasi"}
-                                    </Button>
-                                </div>
-
-                                {/* Langkah 2 — foto, sesuai opsi yang dipilih */}
-                                <div>
-                                    <p className="mb-2 text-xs font-medium text-ink">
-                                        2.{" "}
-                                        {mode === "live"
-                                            ? "Foto selfie"
-                                            : "Unggah foto"}
-                                    </p>
-
-                                    <div className="aspect-4/3 overflow-hidden rounded-xl border border-hairline bg-surface-soft">
-                                        {mode === "live" ? (
-                                            <>
-                                                {photo ? (
+                                            <div className="aspect-4/3 overflow-hidden rounded-xl border border-hairline bg-surface-soft">
+                                                {mode === "live" ? (
+                                                    <>
+                                                        {photo ? (
+                                                            <img
+                                                                src={photo}
+                                                                alt="Pratinjau selfie absensi"
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <video
+                                                                ref={videoRef}
+                                                                playsInline
+                                                                muted
+                                                                className={`h-full w-full object-cover ${cameraOn ? "" : "hidden"}`}
+                                                            />
+                                                        )}
+                                                        {!photo &&
+                                                            !cameraOn && (
+                                                                <div className="grid h-full place-items-center text-[11px] text-ink-muted">
+                                                                    Kamera belum
+                                                                    aktif
+                                                                </div>
+                                                            )}
+                                                    </>
+                                                ) : upload ? (
                                                     <img
-                                                        src={photo}
-                                                        alt="Pratinjau selfie absensi"
+                                                        src={upload.preview}
+                                                        alt="Pratinjau foto yang diunggah"
                                                         className="h-full w-full object-cover"
                                                     />
                                                 ) : (
-                                                    <video
-                                                        ref={videoRef}
-                                                        playsInline
-                                                        muted
-                                                        className={`h-full w-full object-cover ${cameraOn ? "" : "hidden"}`}
-                                                    />
-                                                )}
-                                                {!photo && !cameraOn && (
-                                                    <div className="grid h-full place-items-center text-[11px] text-ink-muted">
-                                                        Kamera belum aktif
+                                                    <div className="grid h-full place-items-center px-4 text-center text-[11px] text-ink-muted">
+                                                        Belum ada berkas dipilih
+                                                        <br />
+                                                        (JPG/PNG, maksimal 5 MB)
                                                     </div>
                                                 )}
-                                            </>
-                                        ) : upload ? (
-                                            <img
-                                                src={upload.preview}
-                                                alt="Pratinjau foto yang diunggah"
-                                                className="h-full w-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="grid h-full place-items-center px-4 text-center text-[11px] text-ink-muted">
-                                                Belum ada berkas dipilih
-                                                <br />
-                                                (JPG/PNG, maksimal 5 MB)
                                             </div>
-                                        )}
+
+                                            {mode === "live" && cameraError && (
+                                                <p className="mt-2 text-[11px] text-[#b53232]">
+                                                    {cameraError}
+                                                </p>
+                                            )}
+
+                                            <div className="mt-3 flex gap-2">
+                                                {mode === "live" ? (
+                                                    photo ? (
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={() => {
+                                                                setPhoto(null);
+                                                                startCamera();
+                                                            }}
+                                                        >
+                                                            Ulangi foto
+                                                        </Button>
+                                                    ) : cameraOn ? (
+                                                        <Button
+                                                            onClick={capture}
+                                                        >
+                                                            Ambil foto
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={
+                                                                startCamera
+                                                            }
+                                                        >
+                                                            Nyalakan kamera
+                                                        </Button>
+                                                    )
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            ref={fileRef}
+                                                            type="file"
+                                                            accept="image/*"
+                                                            capture="user"
+                                                            className="hidden"
+                                                            onChange={(event) =>
+                                                                pickFile(
+                                                                    event.target
+                                                                        .files?.[0] ??
+                                                                        null,
+                                                                )
+                                                            }
+                                                        />
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={() =>
+                                                                fileRef.current?.click()
+                                                            }
+                                                        >
+                                                            {upload
+                                                                ? "Ganti berkas"
+                                                                : "Pilih foto"}
+                                                        </Button>
+                                                        {upload && (
+                                                            <span className="self-center truncate text-[11px] text-ink-muted">
+                                                                {
+                                                                    upload.file
+                                                                        .name
+                                                                }
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {mode === "live" && cameraError && (
-                                        <p className="mt-2 text-[11px] text-[#b53232]">
-                                            {cameraError}
-                                        </p>
-                                    )}
-
-                                    <div className="mt-3 flex gap-2">
-                                        {mode === "live" ? (
-                                            photo ? (
-                                                <Button
-                                                    variant="secondary"
-                                                    onClick={() => {
-                                                        setPhoto(null);
-                                                        startCamera();
-                                                    }}
-                                                >
-                                                    Ulangi foto
-                                                </Button>
-                                            ) : cameraOn ? (
-                                                <Button onClick={capture}>
-                                                    Ambil foto
-                                                </Button>
-                                            ) : (
-                                                <Button
-                                                    variant="secondary"
-                                                    onClick={startCamera}
-                                                >
-                                                    Nyalakan kamera
-                                                </Button>
-                                            )
-                                        ) : (
-                                            <>
-                                                <input
-                                                    ref={fileRef}
-                                                    type="file"
-                                                    accept="image/*"
-                                                    capture="user"
-                                                    className="hidden"
+                                    {mode === "upload" && (
+                                        <div className="mt-5">
+                                            <Field
+                                                label="5. Alasan absen dari luar / unggah foto"
+                                                required
+                                                hint="Ditampilkan ke HR saat memverifikasi. Contoh: kunjungan klien di Gowa, kamera ponsel bermasalah."
+                                            >
+                                                <Textarea
+                                                    rows={2}
+                                                    value={note}
                                                     onChange={(event) =>
-                                                        pickFile(
-                                                            event.target
-                                                                .files?.[0] ??
-                                                                null,
+                                                        setNote(
+                                                            event.target.value,
                                                         )
                                                     }
                                                 />
-                                                <Button
-                                                    variant="secondary"
-                                                    onClick={() =>
-                                                        fileRef.current?.click()
-                                                    }
-                                                >
-                                                    {upload
-                                                        ? "Ganti berkas"
-                                                        : "Pilih foto"}
-                                                </Button>
-                                                {upload && (
-                                                    <span className="self-center truncate text-[11px] text-ink-muted">
-                                                        {upload.file.name}
-                                                    </span>
-                                                )}
-                                            </>
+                                            </Field>
+                                        </div>
+                                    )}
+
+                                    <div className="mt-5 border-t border-hairline pt-4">
+                                        <Button
+                                            onClick={submit}
+                                            disabled={!canSubmit || submitting}
+                                        >
+                                            {submitting
+                                                ? "Mengirim…"
+                                                : mode === "live"
+                                                  ? `Kirim ${actionLabel}`
+                                                  : `Kirim ${actionLabel} untuk verifikasi`}
+                                        </Button>
+                                        {!canSubmit && (
+                                            <p className="mt-2 text-[11px] text-ink-muted">
+                                                {!position
+                                                    ? "Ambil lokasi terlebih dahulu."
+                                                    : mode === "live"
+                                                      ? !insideRadius
+                                                          ? "Anda di luar radius kantor — pindah ke opsi unggah foto bila memang bekerja di lapangan."
+                                                          : !photo
+                                                            ? "Foto selfie belum diambil."
+                                                            : ""
+                                                      : !upload
+                                                        ? "Pilih berkas foto terlebih dahulu."
+                                                        : "Isi alasannya agar HR dapat memverifikasi."}
+                                            </p>
+                                        )}
+                                        {mode === "upload" && canSubmit && (
+                                            <p className="mt-2 text-[11px] text-ink-muted">
+                                                Absensi tercatat hari ini, namun
+                                                baru dihitung setelah HR
+                                                menyetujuinya.
+                                            </p>
                                         )}
                                     </div>
-                                </div>
-                            </div>
-
-                            {mode === "upload" && (
-                                <div className="mt-5">
-                                    <Field
-                                        label="3. Alasan absen dari luar / unggah foto"
-                                        required
-                                        hint="Ditampilkan ke HR saat memverifikasi. Contoh: kunjungan klien di Gowa, kamera ponsel bermasalah."
-                                    >
-                                        <Textarea
-                                            rows={2}
-                                            value={note}
-                                            onChange={(event) =>
-                                                setNote(event.target.value)
-                                            }
-                                        />
-                                    </Field>
-                                </div>
+                                </>
                             )}
-
-                            <div className="mt-5 border-t border-hairline pt-4">
-                                <Button
-                                    onClick={submitClockIn}
-                                    disabled={!canClockIn || submitting}
-                                >
-                                    {submitting
-                                        ? "Mengirim…"
-                                        : mode === "live"
-                                          ? "Kirim clock in"
-                                          : "Kirim untuk verifikasi"}
-                                </Button>
-                                {!canClockIn && (
-                                    <p className="mt-2 text-[11px] text-ink-muted">
-                                        {!position
-                                            ? "Ambil lokasi terlebih dahulu."
-                                            : mode === "live"
-                                              ? !insideRadius
-                                                  ? "Anda di luar radius kantor — pindah ke opsi unggah foto bila memang bekerja di lapangan."
-                                                  : !photo
-                                                    ? "Foto selfie belum diambil."
-                                                    : ""
-                                              : !upload
-                                                ? "Pilih berkas foto terlebih dahulu."
-                                                : "Isi alasannya agar HR dapat memverifikasi."}
-                                    </p>
-                                )}
-                                {mode === "upload" && canClockIn && (
-                                    <p className="mt-2 text-[11px] text-ink-muted">
-                                        Absensi tercatat hari ini, namun baru
-                                        dihitung setelah HR menyetujuinya.
-                                    </p>
-                                )}
-                            </div>
                         </Card>
                     )}
                 </div>
@@ -659,12 +759,14 @@ export default function AttendanceMe({
 
 function ModeCard({
     active,
+    disabled = false,
     icon,
     title,
     description,
     onClick,
 }: {
     active: boolean;
+    disabled?: boolean;
     icon: ReactNode;
     title: string;
     description: string;
@@ -674,11 +776,14 @@ function ModeCard({
         <button
             type="button"
             onClick={onClick}
+            disabled={disabled}
             aria-pressed={active}
             className={`rounded-xl border p-3.5 text-left transition ${
                 active
                     ? "border-brand-400 bg-brand-50"
-                    : "border-hairline bg-surface hover:bg-surface-soft"
+                    : disabled
+                      ? "cursor-not-allowed border-hairline bg-surface-soft opacity-60"
+                      : "border-hairline bg-surface hover:bg-surface-soft"
             }`}
         >
             <span

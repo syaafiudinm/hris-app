@@ -215,3 +215,109 @@ test('pegawai lain tidak dapat membuka foto absensi bukan miliknya', function ()
 
     $this->actingAs($penyusup)->get("/absensi/{$record->id}/foto")->assertForbidden();
 });
+
+/** Pegawai yang sudah clock-in lewat kamera langsung di kantor hari ini. */
+function pegawaiSudahClockIn($test): Employee
+{
+    $employee = pegawaiBelumAbsen();
+
+    $test->actingAs($employee->user)->post('/absensi-saya/clock-in', [
+        'method' => 'live',
+        ...$test->diDalam,
+        'accuracy' => 8,
+        'photo' => fotoDataUrl(),
+    ]);
+
+    return $employee;
+}
+
+test('clock-out wajib menyertakan lokasi dan foto', function () {
+    $employee = pegawaiSudahClockIn($this);
+
+    $this->actingAs($employee->user)
+        ->post('/absensi-saya/clock-out', ['method' => 'live'])
+        ->assertSessionHasErrors(['latitude', 'longitude', 'photo']);
+
+    expect(Attendance::where('employee_id', $employee->id)->whereDate('date', now())->first()->clock_out)
+        ->toBeNull();
+});
+
+test('clock-out kamera langsung ditolak dari luar radius kantor', function () {
+    $employee = pegawaiSudahClockIn($this);
+
+    $this->actingAs($employee->user)
+        ->post('/absensi-saya/clock-out', [
+            'method' => 'live',
+            ...$this->diLuar,
+            'accuracy' => 12,
+            'photo' => fotoDataUrl(),
+        ])
+        ->assertSessionHasErrors('latitude');
+
+    expect(Attendance::where('employee_id', $employee->id)->whereDate('date', now())->first()->clock_out)
+        ->toBeNull();
+});
+
+test('clock-out kamera langsung di dalam radius menyimpan foto dan tetap sah', function () {
+    $employee = pegawaiSudahClockIn($this);
+
+    $this->actingAs($employee->user)
+        ->post('/absensi-saya/clock-out', [
+            'method' => 'live',
+            ...$this->diDalam,
+            'accuracy' => 8,
+            'photo' => fotoDataUrl(),
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $record = Attendance::where('employee_id', $employee->id)->whereDate('date', now())->firstOrFail();
+
+    expect($record->clock_out)->not->toBeNull()
+        ->and($record->clock_out_method)->toBe('live')
+        ->and($record->is_clock_out_outside_radius)->toBeFalse()
+        ->and($record->verification_status)->toBe('auto');
+
+    Storage::disk(AttendanceService::PHOTO_DISK)->assertExists($record->clock_out_photo);
+});
+
+test('clock-out unggah foto dari luar radius masuk antrean verifikasi HR', function () {
+    $employee = pegawaiSudahClockIn($this);
+
+    $this->actingAs($employee->user)
+        ->post('/absensi-saya/clock-out', [
+            'method' => 'upload',
+            ...$this->diLuar,
+            'accuracy' => 20,
+            'photo_file' => UploadedFile::fake()->image('pulang.jpg'),
+            'note' => 'Pulang langsung dari lokasi klien',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $record = Attendance::where('employee_id', $employee->id)->whereDate('date', now())->firstOrFail();
+
+    expect($record->clock_out_method)->toBe('upload')
+        ->and($record->is_clock_out_outside_radius)->toBeTrue()
+        ->and($record->clock_out_note)->toBe('Pulang langsung dari lokasi klien')
+        ->and($record->verification_status)->toBe('pending');
+
+    $this->actingAs($this->admin)
+        ->get("/absensi/{$record->id}/foto?jenis=pulang")
+        ->assertOk();
+});
+
+test('clock-out ditolak bila belum clock-in', function () {
+    $employee = pegawaiBelumAbsen();
+
+    $this->actingAs($employee->user)
+        ->post('/absensi-saya/clock-out', [
+            'method' => 'live',
+            ...$this->diDalam,
+            'photo' => fotoDataUrl(),
+        ])
+        ->assertSessionHas('error');
+
+    expect(Attendance::where('employee_id', $employee->id)->whereDate('date', now())->exists())
+        ->toBeFalse();
+});

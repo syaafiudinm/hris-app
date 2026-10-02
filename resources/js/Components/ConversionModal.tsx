@@ -171,7 +171,7 @@ export default function ConversionModal({
                         <Input
                             type="number"
                             min={0}
-                            step={100000}
+                            step={1}
                             value={data.basic_salary}
                             onChange={(event) =>
                                 setData("basic_salary", Number(event.target.value))
@@ -220,7 +220,7 @@ export default function ConversionModal({
                                 <Input
                                     type="number"
                                     min={0}
-                                    step={1000}
+                                    step={1}
                                     value={data.rate_per_unit}
                                     onChange={(event) =>
                                         setData(

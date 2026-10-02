@@ -57,6 +57,14 @@ class AttendanceController extends Controller
                 'distance' => $record->clock_in_distance,
                 'isOutsideRadius' => $record->is_outside_radius,
                 'hasPhoto' => (bool) $record->clock_in_photo,
+                'clockOutMethodLabel' => $record->clock_out_method
+                    ? (Attendance::METHOD_LABELS[$record->clock_out_method] ?? $record->clock_out_method)
+                    : null,
+                'clockOutNote' => $record->clock_out_note,
+                'clockOutOffice' => $record->clock_out_office,
+                'clockOutDistance' => $record->clock_out_distance,
+                'isClockOutOutsideRadius' => $record->is_clock_out_outside_radius,
+                'hasClockOutPhoto' => (bool) $record->clock_out_photo,
             ]);
 
         $range = $this->range($request);
@@ -85,7 +93,7 @@ class AttendanceController extends Controller
         $today = CarbonImmutable::today();
 
         $todayRecord = Attendance::where('employee_id', $employee->id)
-            ->where('date', $today->toDateString())
+            ->whereDate('date', $today->toDateString())
             ->first();
 
         return Inertia::render('Attendance/Me', [
@@ -142,59 +150,20 @@ class AttendanceController extends Controller
      */
     public function clockIn(Request $request): RedirectResponse
     {
-        $method = $request->string('method')->toString() ?: 'live';
-
-        $payload = $request->validate([
-            'method' => ['nullable', Rule::in(AttendanceService::METHODS)],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'accuracy' => ['nullable', 'numeric'],
-            'is_mock_location' => ['nullable', 'boolean'],
-            // Kamera langsung mengirim data URL, mode unggah mengirim berkas.
-            'photo' => [Rule::requiredIf($method === 'live'), 'nullable', 'string'],
-            'photo_file' => [Rule::requiredIf($method === 'upload'), 'nullable', 'image', 'max:5120'],
-            'note' => [Rule::requiredIf($method === 'upload'), 'nullable', 'string', 'max:500'],
-        ]);
+        [$method, $payload] = $this->validateCapture($request);
 
         $employee = $this->currentEmployee($request);
         $today = CarbonImmutable::today();
 
         $existing = Attendance::where('employee_id', $employee->id)
-            ->where('date', $today->toDateString())
+            ->whereDate('date', $today->toDateString())
             ->first();
 
         if ($existing?->clock_in) {
             return back()->with('error', 'Anda sudah melakukan clock-in hari ini.');
         }
 
-        $geofence = $this->attendance->resolveGeofence(
-            (float) $payload['latitude'],
-            (float) $payload['longitude'],
-        );
-
-        // Hanya mode kamera langsung yang dikunci radius; mode unggah
-        // mencatat jaraknya lalu menyerahkan keputusan ke HR.
-        if ($method === 'live' && ! $geofence['inside']) {
-            throw ValidationException::withMessages([
-                'latitude' => sprintf(
-                    'Anda berada %s meter dari %s — di luar radius absensi. Gunakan opsi unggah foto bila memang bekerja di luar kantor.',
-                    number_format($geofence['distance'] ?? 0, 0, ',', '.'),
-                    $geofence['location']?->name ?? 'lokasi kantor',
-                ),
-            ]);
-        }
-
-        $fakeGpsReasons = $this->attendance->detectFakeGps($employee, $payload);
-
-        $photoPath = $method === 'upload'
-            ? $this->attendance->storeUploadedPhoto($request->file('photo_file'), $employee)
-            : $this->attendance->storePhoto((string) $payload['photo'], $employee);
-
-        if (! $photoPath) {
-            throw ValidationException::withMessages([
-                'photo' => 'Foto absensi tidak valid. Ulangi pengambilan atau pilih berkas lain.',
-            ]);
-        }
+        $capture = $this->capture($request, $employee, $method, $payload);
 
         $now = CarbonImmutable::now();
         $evaluation = $this->attendance->evaluateClockIn($now);
@@ -205,23 +174,23 @@ class AttendanceController extends Controller
                 'clock_in' => $now,
                 'clock_in_lat' => $payload['latitude'],
                 'clock_in_long' => $payload['longitude'],
-                'clock_in_photo' => $photoPath,
+                'clock_in_photo' => $capture['photo'],
                 'clock_in_method' => $method,
-                'clock_in_distance' => $geofence['distance'] !== null ? (int) round($geofence['distance']) : null,
-                'clock_in_office' => $geofence['location']?->name,
-                'is_outside_radius' => ! $geofence['inside'],
+                'clock_in_distance' => $capture['distance'],
+                'clock_in_office' => $capture['office'],
+                'is_outside_radius' => $capture['outside'],
                 'clock_in_note' => $payload['note'] ?? null,
                 'verification_status' => $method === 'upload' ? 'pending' : 'auto',
-                'is_fake_gps' => $fakeGpsReasons !== [],
+                'is_fake_gps' => $capture['fakeGpsReasons'] !== [],
                 'status' => $evaluation['status'],
                 'late_minutes' => $evaluation['lateMinutes'],
             ],
         );
 
-        if ($fakeGpsReasons !== []) {
+        if ($capture['fakeGpsReasons'] !== []) {
             return back()->with(
                 'error',
-                'Clock-in tercatat namun ditandai untuk verifikasi HR: '.implode(' ', $fakeGpsReasons),
+                'Clock-in tercatat namun ditandai untuk verifikasi HR: '.implode(' ', $capture['fakeGpsReasons']),
             );
         }
 
@@ -237,6 +206,77 @@ class AttendanceController extends Controller
             : "Clock-in tercatat pukul {$now->format('H:i')}. Selamat bekerja.";
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * Clock-out memakai dua opsi yang sama dengan clock-in.
+     *
+     * Clock-out lewat unggah foto mengembalikan absensi hari itu ke antrean
+     * verifikasi HR, karena titik pulangnya belum tentu di lokasi kerja.
+     */
+    public function clockOut(Request $request): RedirectResponse
+    {
+        [$method, $payload] = $this->validateCapture($request);
+
+        $employee = $this->currentEmployee($request);
+        $today = CarbonImmutable::today();
+
+        $record = Attendance::where('employee_id', $employee->id)
+            ->whereDate('date', $today->toDateString())
+            ->first();
+
+        if (! $record?->clock_in) {
+            return back()->with('error', 'Belum ada clock-in hari ini.');
+        }
+
+        if ($record->clock_out) {
+            return back()->with('error', 'Anda sudah melakukan clock-out hari ini.');
+        }
+
+        $capture = $this->capture($request, $employee, $method, $payload);
+
+        $now = CarbonImmutable::now();
+
+        $attributes = [
+            'clock_out' => $now,
+            'work_minutes' => (int) $record->clock_in->diffInMinutes($now),
+            'clock_out_lat' => $payload['latitude'],
+            'clock_out_long' => $payload['longitude'],
+            'clock_out_photo' => $capture['photo'],
+            'clock_out_method' => $method,
+            'clock_out_distance' => $capture['distance'],
+            'clock_out_office' => $capture['office'],
+            'is_clock_out_outside_radius' => $capture['outside'],
+            'clock_out_note' => $payload['note'] ?? null,
+        ];
+
+        if ($capture['fakeGpsReasons'] !== []) {
+            $attributes['is_fake_gps'] = true;
+        }
+
+        // Absensi yang sudah ditolak tetap ditolak; selain itu, unggahan
+        // pulang perlu dicek HR seperti unggahan masuk.
+        if ($method === 'upload' && $record->verification_status !== 'rejected') {
+            $attributes['verification_status'] = 'pending';
+        }
+
+        $record->update($attributes);
+
+        if ($capture['fakeGpsReasons'] !== []) {
+            return back()->with(
+                'error',
+                'Clock-out tercatat namun ditandai untuk verifikasi HR: '.implode(' ', $capture['fakeGpsReasons']),
+            );
+        }
+
+        if ($method === 'upload') {
+            return back()->with(
+                'success',
+                "Clock-out pukul {$now->format('H:i')} terkirim. Foto unggahan menunggu verifikasi HR.",
+            );
+        }
+
+        return back()->with('success', "Clock-out tercatat pukul {$now->format('H:i')}.");
     }
 
     /**
@@ -283,40 +323,19 @@ class AttendanceController extends Controller
                 && $attendance->employee?->department_id === $user->employee?->department_id);
 
         abort_if(! $allowed, 403, 'Anda tidak berhak melihat foto absensi ini.');
-        abort_if(! $attendance->clock_in_photo, 404, 'Absensi ini tidak memiliki foto.');
+
+        // ?jenis=pulang membuka foto clock-out; tanpa parameter, foto masuk.
+        $path = $request->query('jenis') === 'pulang'
+            ? $attendance->clock_out_photo
+            : $attendance->clock_in_photo;
+
+        abort_if(! $path, 404, 'Absensi ini tidak memiliki foto.');
 
         $disk = Storage::disk(AttendanceService::PHOTO_DISK);
 
-        abort_if(! $disk->exists($attendance->clock_in_photo), 404, 'Berkas foto tidak ditemukan.');
+        abort_if(! $disk->exists($path), 404, 'Berkas foto tidak ditemukan.');
 
-        return $disk->response($attendance->clock_in_photo);
-    }
-
-    public function clockOut(Request $request): RedirectResponse
-    {
-        $employee = $this->currentEmployee($request);
-        $today = CarbonImmutable::today();
-
-        $record = Attendance::where('employee_id', $employee->id)
-            ->where('date', $today->toDateString())
-            ->first();
-
-        if (! $record?->clock_in) {
-            return back()->with('error', 'Belum ada clock-in hari ini.');
-        }
-
-        if ($record->clock_out) {
-            return back()->with('error', 'Anda sudah melakukan clock-out hari ini.');
-        }
-
-        $now = CarbonImmutable::now();
-
-        $record->update([
-            'clock_out' => $now,
-            'work_minutes' => (int) $record->clock_in->diffInMinutes($now),
-        ]);
-
-        return back()->with('success', "Clock-out tercatat pukul {$now->format('H:i')}.");
+        return $disk->response($path);
     }
 
     /**
@@ -429,6 +448,78 @@ class AttendanceController extends Controller
             rows: $rows,
             filters: ['periode' => "{$range['from']} s/d {$range['to']}"],
         );
+    }
+
+    /**
+     * Validasi data absen (lokasi + foto) yang sama untuk clock-in dan
+     * clock-out.
+     *
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private function validateCapture(Request $request): array
+    {
+        $method = $request->string('method')->toString() ?: 'live';
+
+        $payload = $request->validate([
+            'method' => ['nullable', Rule::in(AttendanceService::METHODS)],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'accuracy' => ['nullable', 'numeric'],
+            'is_mock_location' => ['nullable', 'boolean'],
+            // Kamera langsung mengirim data URL, mode unggah mengirim berkas.
+            'photo' => [Rule::requiredIf($method === 'live'), 'nullable', 'string'],
+            'photo_file' => [Rule::requiredIf($method === 'upload'), 'nullable', 'image', 'max:5120'],
+            'note' => [Rule::requiredIf($method === 'upload'), 'nullable', 'string', 'max:500'],
+        ]);
+
+        return [$method, $payload];
+    }
+
+    /**
+     * Cek geofence, indikasi fake GPS, lalu simpan fotonya.
+     *
+     * Hanya mode kamera langsung yang dikunci radius; mode unggah mencatat
+     * jaraknya lalu menyerahkan keputusan ke HR.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array{photo: string, distance: ?int, office: ?string, outside: bool, fakeGpsReasons: list<string>}
+     */
+    private function capture(Request $request, Employee $employee, string $method, array $payload): array
+    {
+        $geofence = $this->attendance->resolveGeofence(
+            (float) $payload['latitude'],
+            (float) $payload['longitude'],
+        );
+
+        if ($method === 'live' && ! $geofence['inside']) {
+            throw ValidationException::withMessages([
+                'latitude' => sprintf(
+                    'Anda berada %s meter dari %s — di luar radius absensi. Gunakan opsi unggah foto bila memang bekerja di luar kantor.',
+                    number_format($geofence['distance'] ?? 0, 0, ',', '.'),
+                    $geofence['location']?->name ?? 'lokasi kantor',
+                ),
+            ]);
+        }
+
+        $fakeGpsReasons = $this->attendance->detectFakeGps($employee, $payload);
+
+        $photoPath = $method === 'upload'
+            ? $this->attendance->storeUploadedPhoto($request->file('photo_file'), $employee)
+            : $this->attendance->storePhoto((string) $payload['photo'], $employee);
+
+        if (! $photoPath) {
+            throw ValidationException::withMessages([
+                'photo' => 'Foto absensi tidak valid. Ulangi pengambilan atau pilih berkas lain.',
+            ]);
+        }
+
+        return [
+            'photo' => $photoPath,
+            'distance' => $geofence['distance'] !== null ? (int) round($geofence['distance']) : null,
+            'office' => $geofence['location']?->name,
+            'outside' => ! $geofence['inside'],
+            'fakeGpsReasons' => $fakeGpsReasons,
+        ];
     }
 
     private function currentEmployee(Request $request): Employee

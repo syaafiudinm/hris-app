@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Panduan Penggunaan HRIS &amp; ATS</title>
+<style>
+    @page { margin: 22mm 18mm 20mm 18mm; }
+    body { font-family: "DejaVu Sans", Helvetica, sans-serif; font-size: 9.6pt; line-height: 1.5; color: #1f2a37; }
+    h1, h2, h3, h4 { color: #0f1b2d; margin: 0; }
+    h2 { font-size: 17pt; padding-bottom: 6px; border-bottom: 2px solid #2563eb; margin-bottom: 12px; }
+    h3 { font-size: 12pt; margin: 18px 0 6px; color: #1d4ed8; }
+    h4 { font-size: 10pt; margin: 12px 0 4px; }
+    p { margin: 0 0 7px; }
+    ul, ol { margin: 0 0 8px; padding-left: 18px; }
+    li { margin-bottom: 3px; }
+    .chapter { page-break-before: always; }
+    .muted { color: #5b6b7f; }
+    .small { font-size: 8.4pt; }
+    .path { font-family: "DejaVu Sans Mono", monospace; font-size: 8.6pt; background: #eef2f7; padding: 1px 4px; border-radius: 3px; }
+    .btn { font-weight: bold; color: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; }
+    th, td { border: 1px solid #d5dde8; padding: 5px 7px; vertical-align: top; text-align: left; }
+    th { background: #eef2f7; font-size: 8.8pt; }
+    td { font-size: 9pt; line-height: 1.4; }
+    .note, .warn, .tip { padding: 7px 10px; margin: 8px 0 10px; border-left: 3px solid; page-break-inside: avoid; }
+    tr { page-break-inside: avoid; }
+    h3, h4 { page-break-after: avoid; }
+    .note { background: #eff5ff; border-color: #2563eb; }
+    .tip { background: #effaef; border-color: #16a34a; }
+    .warn { background: #fdf6e6; border-color: #d97706; }
+    .step { width: 100%; border: none; margin: 4px 0 8px; }
+    .step td { border: none; padding: 3px 0; }
+    .step .num { width: 20px; color: #2563eb; font-weight: bold; }
+    .role { display: inline-block; font-size: 7.6pt; font-weight: bold; padding: 1px 6px; border-radius: 3px; margin-right: 3px; }
+    .r-all { background: #e0e7ff; color: #3730a3; }
+    .r-mgr { background: #fef3c7; color: #92400e; }
+    .r-hr { background: #dcfce7; color: #166534; }
+    .cover { text-align: left; padding-top: 150px; }
+    .cover .brand { width: 46px; border-collapse: separate; margin: 0; }
+    .cover .brand td { width: 46px; height: 46px; padding: 0; border: none; border-radius: 10px; background: #2563eb; color: #fff; font-size: 20pt; font-weight: bold; text-align: center; vertical-align: middle; line-height: 1; }
+    .cover h1 { font-size: 30pt; margin-top: 26px; line-height: 1.2; }
+    .cover .sub { font-size: 13pt; color: #5b6b7f; margin-top: 8px; }
+    .cover .meta { margin-top: 220px; border-top: 1px solid #d5dde8; padding-top: 10px; }
+    .toc td { border: none; border-bottom: 1px dotted #c5cfdb; padding: 4px 0; }
+    .toc .lvl2 td { padding-left: 14px; font-size: 8.8pt; color: #3b4a5d; }
+    .flow { text-align: center; margin: 6px 0 10px; }
+    .flow span.box { display: inline-block; border: 1px solid #93b4f5; background: #eff5ff; border-radius: 4px; padding: 3px 8px; font-size: 8.6pt; }
+    .flow span.arrow { color: #5b6b7f; padding: 0 3px; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ COVER -->
+<div class="cover">
+    <table class="brand"><tr><td>H</td></tr></table>
+    <h1>Panduan Penggunaan<br>HRIS &amp; ATS</h1>
+    <p class="sub">Workforce Platform — Geely Ricklean Makassar</p>
+    <p class="muted" style="margin-top:18px; width:75%;">
+        Panduan langkah demi langkah untuk karyawan, mitra, atasan, dan tim HR:
+        absensi, cuti, slip gaji, data diri, inventaris, payroll, hingga rekrutmen.
+    </p>
+    <div class="meta small muted">
+        Versi 1.0 · September 2026<br>
+        Zona waktu aplikasi: WITA (UTC+8)
+    </div>
+</div>
+
+<!-- ============================================================ TOC -->
+<div class="chapter">
+    <h2>Daftar Isi</h2>
+    <table class="toc">
+        <tr><td><b>1. Mengenal Aplikasi</b></td></tr>
+        <tr class="lvl2"><td>1.1 Peran pengguna &amp; menu · 1.2 Entitas kerja</td></tr>
+        <tr><td><b>2. Memulai</b></td></tr>
+        <tr class="lvl2"><td>2.1 Masuk · 2.2 Ganti password · 2.3 Lupa password · 2.4 Keluar</td></tr>
+        <tr><td><b>3. Portal Saya — untuk semua pengguna</b></td></tr>
+        <tr class="lvl2"><td>3.1 Data Diri &amp; dokumen · 3.2 Absensi · 3.3 Cuti &amp; izin · 3.4 Slip gaji · 3.5 Pinjam inventaris · 3.6 Knowledge Center</td></tr>
+        <tr><td><b>4. Menu Atasan (Manager)</b></td></tr>
+        <tr class="lvl2"><td>4.1 Rekap absensi &amp; verifikasi · 4.2 Approval cuti</td></tr>
+        <tr><td><b>5. Menu HR (Super Admin)</b></td></tr>
+        <tr class="lvl2"><td>5.1 Dashboard · 5.2 Tenaga kerja &amp; akun · 5.3 Entitas kerja · 5.4 Inventaris · 5.5 Proses keluar &amp; paklaring · 5.6 Payroll · 5.7 Skema mitra · 5.8 Penjualan mitra · 5.9 Lowongan · 5.10 Rekrutmen · 5.11 Kelola Knowledge · 5.12 Ekspor data</td></tr>
+        <tr><td><b>6. Portal Karier untuk Pelamar</b></td></tr>
+        <tr><td><b>7. Tanya Jawab &amp; Kendala Umum</b></td></tr>
+    </table>
+
+    <div class="note small">
+        <b>Cara membaca panduan ini.</b> Setiap bagian diberi label peran:
+        <span class="role r-all">SEMUA</span> dapat dipakai seluruh akun,
+        <span class="role r-mgr">MANAGER</span> untuk atasan dan HR,
+        <span class="role r-hr">HR</span> khusus Super Admin / HR.
+        Nama tombol ditulis <span class="btn">tebal biru</span>, alamat halaman ditulis seperti <span class="path">/absensi-saya</span>.
+    </div>
+</div>
+
+<!-- ============================================================ 1 -->
+<div class="chapter">
+    <h2>1. Mengenal Aplikasi</h2>
+    <p>
+        HRIS &amp; ATS adalah aplikasi web untuk mengelola seluruh siklus kepegawaian: dari lowongan
+        dan rekrutmen, data induk karyawan, absensi berbasis lokasi, cuti, penggajian, peminjaman
+        inventaris, sampai proses keluar dan penerbitan paklaring. Aplikasi dibuka lewat browser di
+        komputer maupun ponsel — tidak perlu memasang aplikasi.
+    </p>
+
+    <h3>1.1 Peran pengguna &amp; menu</h3>
+    <p>Menu di sisi kiri menyesuaikan peran akun Anda. Menu yang bukan hak Anda tidak tampil, dan aksesnya juga ditolak server.</p>
+    <table>
+        <tr><th style="width:24%">Menu</th><th>Fungsi</th><th style="width:9%">Employee / Mitra</th><th style="width:9%">Manager</th><th style="width:9%">HR</th></tr>
+        <tr><td colspan="5" style="background:#f7f9fc"><b>Portal Saya</b></td></tr>
+        <tr><td>Data Diri</td><td>Isian data pribadi &amp; unggah dokumen kelengkapan</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Absensi Saya</td><td>Clock in / clock out harian</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Cuti &amp; Izin Saya</td><td>Pengajuan cuti, sakit, dan izin</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Slip Gaji Saya</td><td>Melihat &amp; mengunduh slip</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Pinjam Inventaris</td><td>Mengajukan peminjaman aset</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Knowledge Center</td><td>Pengumuman, SOP, peraturan</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td colspan="5" style="background:#f7f9fc"><b>Manajemen</b></td></tr>
+        <tr><td>Rekap Absensi</td><td>Rekap kehadiran tim &amp; verifikasi absen unggah foto</td><td></td><td>✓</td><td>✓</td></tr>
+        <tr><td>Approval Cuti</td><td>Menyetujui / menolak pengajuan cuti</td><td></td><td>✓</td><td>✓</td></tr>
+        <tr><td>Tenaga Kerja, Entitas Kerja, Inventaris, Proses Keluar, Payroll, Skema Mitra, Penjualan Mitra, Lowongan, Rekrutmen, Kelola Knowledge</td><td>Konfigurasi &amp; administrasi SDM</td><td></td><td></td><td>✓</td></tr>
+    </table>
+
+    <h3>1.2 Entitas kerja</h3>
+    <p>Setiap karyawan terikat pada satu <b>entitas kerja</b>. Entitas inilah yang menentukan hak-hak secara otomatis:</p>
+    <table>
+        <tr><th style="width:18%">Kategori</th><th>Keterangan</th><th style="width:36%">Yang dipengaruhi</th></tr>
+        <tr><td><b>Probation</b></td><td>Masa percobaan, mis. 3 bulan.</td><td rowspan="3">Hak cuti tahunan &amp; kuotanya, kepesertaan BPJS, cara penggajian (gaji karyawan atau skema mitra), dan pemotongan PPh 21.</td></tr>
+        <tr><td><b>PKWT</b></td><td>Perjanjian kerja waktu tertentu, mis. 3/6/12 bulan.</td></tr>
+        <tr><td><b>Mitra</b></td><td>Mitra / freelance, dibayar lewat skema custom.</td></tr>
+    </table>
+    <p class="small muted">Rincian hak per entitas diatur HR pada menu Entitas Kerja (lihat 5.3). Karyawan dapat melihat entitasnya di halaman Data Diri.</p>
+</div>
+
+<!-- ============================================================ 2 -->
+<div style="margin-top:26px">
+    <h2>2. Memulai <span class="role r-all">SEMUA</span></h2>
+
+    <h3>2.1 Masuk ke aplikasi</h3>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Buka alamat aplikasi yang diberikan HR di browser (Chrome, Safari, atau Edge versi terbaru).</td></tr>
+        <tr><td class="num">2.</td><td>Isi <b>email</b> dan <b>kata sandi</b> yang Anda terima dari HR.</td></tr>
+        <tr><td class="num">3.</td><td>Klik <span class="btn">Masuk</span>. Anda akan diarahkan ke Dashboard.</td></tr>
+    </table>
+    <div class="note small">Akun dibuat oleh HR saat data Anda didaftarkan. Email login sama dengan <b>email aktif</b> pada data diri Anda.</div>
+
+    <h3>2.2 Ganti password (wajib pada login pertama)</h3>
+    <p>Password awal dari HR bersifat sementara. Pada login pertama — atau setelah HR mereset password — Anda otomatis diarahkan ke halaman <span class="path">/ganti-password</span> dan belum bisa membuka menu lain sebelum menggantinya.</p>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Isi <b>Password saat ini</b> (password dari HR).</td></tr>
+        <tr><td class="num">2.</td><td>Isi <b>Password baru</b> minimal 8 karakter, lalu ulangi pada <b>Konfirmasi password baru</b>.</td></tr>
+        <tr><td class="num">3.</td><td>Klik simpan. Selanjutnya Anda bisa mengganti password kapan saja lewat tautan <span class="btn">Ganti Password</span> di kartu profil kiri bawah.</td></tr>
+    </table>
+    <div class="tip small"><b>Tips:</b> gunakan kombinasi huruf besar, huruf kecil, angka, dan simbol. Jangan pakai tanggal lahir atau nama.</div>
+
+    <h3>2.3 Lupa password</h3>
+    <p>Hubungi HR. HR akan menekan <span class="btn">Reset Password</span> pada data Anda dan memberikan password sementara yang baru. Setelah login, Anda wajib menggantinya lagi.</p>
+
+    <h3>2.4 Keluar</h3>
+    <p>Klik <span class="btn">Keluar</span> di kartu profil kiri bawah. Selalu keluar bila memakai perangkat bersama.</p>
+    <p class="small muted">Di ponsel, menu kiri tersembunyi — ketuk ikon tiga garis di pojok kiri atas untuk membukanya.</p>
+</div>
+
+<!-- ============================================================ 3 -->
+<div class="chapter">
+    <h2>3. Portal Saya <span class="role r-all">SEMUA</span></h2>
+    <p>Menu Portal Saya berisi layanan mandiri. Semua data yang tampil di sini hanya milik Anda sendiri.</p>
+
+    <h3>3.1 Data Diri &amp; dokumen kelengkapan</h3>
+    <p>Buka menu <b>Data Diri</b> (<span class="path">/data-diri</span>). Selama data belum 100% lengkap, pengingat berwarna kuning tampil di atas setiap halaman.</p>
+
+    <h4>a. Mengisi data diri</h4>
+    <table>
+        <tr><th style="width:30%">Kelompok</th><th>Isian (semua wajib)</th></tr>
+        <tr><td>Identitas</td><td>Nama lengkap (sesuai KTP), No KTP (16 digit), tempat &amp; tanggal lahir, jenis kelamin, agama, status pernikahan, jumlah tanggungan se-KK (isi 0 bila tidak ada), alamat sesuai KTP, alamat domisili saat ini</td></tr>
+        <tr><td>Kontak</td><td>No WhatsApp, email aktif</td></tr>
+        <tr><td>Kontak darurat</td><td>Nama, hubungan (mis. orang tua, suami/istri), nomor kontak darurat</td></tr>
+    </table>
+    <p>Klik <span class="btn">Simpan data diri</span>. Bila alamat domisili sama dengan KTP, gunakan tautan <span class="btn">Sama dengan alamat KTP</span>.</p>
+    <div class="warn small"><b>Perhatian:</b> email aktif juga dipakai untuk login. Bila Anda menggantinya, login berikutnya memakai email yang baru.</div>
+    <p><b>Departemen, posisi, tanggal bergabung, dan status kerja sama</b> (Probation / PKWT / Mitra) hanya ditampilkan dan diatur oleh HR. Hubungi HR bila ada yang tidak sesuai.</p>
+
+    <h4>b. Mengunggah dokumen</h4>
+    <p>Pada kartu <b>Dokumen kelengkapan</b>, klik <span class="btn">Unggah</span> di samping jenis dokumen, lalu pilih berkas. Berkas langsung tersimpan tanpa perlu menekan tombol lain.</p>
+    <table>
+        <tr><th>Dokumen</th><th style="width:15%">Format</th><th style="width:12%">Maks.</th><th style="width:15%">Sifat</th></tr>
+        <tr><td>CV Terbaru</td><td>PDF</td><td>2 MB</td><td>Wajib</td></tr>
+        <tr><td>KTP (Kartu Tanda Penduduk)</td><td>PDF</td><td>2 MB</td><td>Wajib</td></tr>
+        <tr><td>KK (Kartu Keluarga)</td><td>PDF</td><td>2 MB</td><td>Wajib</td></tr>
+        <tr><td>Foto Diri Terbaru (formal/semi-formal)</td><td>PDF/JPG/PNG</td><td>2 MB</td><td>Wajib</td></tr>
+        <tr><td>Halaman depan buku rekening BCA / SS mobile banking (nama &amp; nomor rekening terbaca jelas)</td><td>PDF</td><td>2 MB</td><td>Wajib</td></tr>
+        <tr><td>NPWP</td><td>PDF</td><td>2 MB</td><td>Wajib</td></tr>
+        <tr><td>Ijazah Terakhir &amp; Paklaring perusahaan sebelumnya (digabung satu PDF)</td><td>PDF</td><td>5 MB</td><td>Boleh menyusul</td></tr>
+        <tr><td>Sertifikat Pendukung (digabung satu PDF)</td><td>PDF</td><td>5 MB</td><td>Jika ada</td></tr>
+    </table>
+    <ul class="small">
+        <li><span class="btn">Ganti</span> mengunggah berkas baru dan menggantikan yang lama; <span class="btn">Hapus</span> membuang dokumen.</li>
+        <li>Klik nama berkas untuk membukanya. Dokumen hanya dapat dibuka oleh Anda dan HR.</li>
+        <li>Belum punya PDF? Foto dokumen dengan ponsel lalu jadikan PDF memakai fitur <i>scan</i> di Google Drive, aplikasi Notes (iPhone), atau CamScanner.</li>
+    </ul>
+    <p>Kartu <b>Kelengkapan</b> di sisi kanan menampilkan persentase serta daftar isian dan dokumen yang masih kurang.</p>
+</div>
+
+<div>
+    <h3>3.2 Absensi Saya</h3>
+    <p>Buka menu <b>Absensi Saya</b> (<span class="path">/absensi-saya</span>). Jam kerja dimulai <b>pukul 08.00 WITA</b>; clock in setelah itu tercatat <b>terlambat</b> beserta jumlah menitnya.</p>
+
+    <div class="warn small">
+        <b>Sebelum absen:</b> izinkan browser mengakses <b>lokasi</b> dan <b>kamera</b>. Bila izin pernah ditolak, buka pengaturan situs di browser lalu setel ke “Izinkan”.
+    </div>
+
+    <p>Absen dilakukan bertahap. Pertama pilih jenis absen: <b>Clock in</b> (masuk) atau <b>Clock out</b> (pulang). Clock out baru bisa dipilih setelah clock in. Setelah itu pilih cara mengambil foto, sesuai kondisi Anda saat itu:</p>
+    <table>
+        <tr><th style="width:22%"></th><th>Kamera langsung</th><th>Unggah foto</th></tr>
+        <tr><td><b>Kapan dipakai</b></td><td>Anda berada di kantor</td><td>Bekerja di luar kantor (kunjungan klien, lapangan) atau kamera bermasalah</td></tr>
+        <tr><td><b>Lokasi</b></td><td>Wajib di dalam radius kantor (±150 m dari Kantor Geely Ricklean Makassar)</td><td>Boleh di luar radius; jarak tetap dicatat</td></tr>
+        <tr><td><b>Foto</b></td><td>Selfie langsung dari kamera</td><td>Pilih foto dari galeri / berkas (maks. 5 MB)</td></tr>
+        <tr><td><b>Keterangan</b></td><td>Tidak perlu</td><td>Wajib diisi alasan</td></tr>
+        <tr><td><b>Status</b></td><td>Langsung sah</td><td>Menunggu verifikasi HR / atasan; baru dihitung setelah disetujui</td></tr>
+    </table>
+
+    <h4>Clock in dengan kamera langsung</h4>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Pilih <b>Clock in</b>, lalu <b>Kamera langsung</b>. Tekan tombol ambil lokasi dan tunggu hingga lokasi dan jarak ke kantor tampil.</td></tr>
+        <tr><td class="num">2.</td><td>Tekan <span class="btn">Nyalakan kamera</span>, lalu <span class="btn">Ambil foto</span>. Bila kurang jelas, tekan <span class="btn">Ulangi foto</span>.</td></tr>
+        <tr><td class="num">3.</td><td>Tekan <span class="btn">Kirim clock in</span>. Pesan hijau menampilkan jam tercatat, atau jumlah menit terlambat.</td></tr>
+    </table>
+
+    <h4>Clock in dengan unggah foto</h4>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Pilih <b>Clock in</b>, lalu <b>Unggah foto</b>, dan ambil lokasi.</td></tr>
+        <tr><td class="num">2.</td><td>Pilih berkas foto, lalu isi alasan, mis. “kunjungan klien di Gowa”.</td></tr>
+        <tr><td class="num">3.</td><td>Tekan <span class="btn">Kirim clock in untuk verifikasi</span>. Status tampil “menunggu verifikasi HR”.</td></tr>
+    </table>
+
+    <h4>Clock out</h4>
+    <p>Saat pulang, buka lagi Absensi Saya, pilih <b>Clock out</b>, lalu pilih <b>Kamera langsung</b> atau <b>Unggah foto</b>. Langkah selanjutnya sama seperti clock in: ambil lokasi, ambil/pilih foto (dan isi alasan bila unggah), lalu tekan <span class="btn">Kirim clock out</span>. Clock out lewat unggah foto membuat absensi hari itu kembali menunggu verifikasi HR. Durasi kerja dihitung dari clock in sampai clock out. Clock in dan clock out masing-masing hanya sekali per hari.</p>
+
+    <div class="note small">
+        <b>Deteksi lokasi palsu.</b> Sistem memeriksa aplikasi <i>fake GPS</i>, akurasi yang tidak wajar, koordinat yang diketik manual, dan perpindahan yang mustahil. Absen yang terindikasi tetap tercatat tetapi <b>ditandai</b> untuk diperiksa HR. Jangan memakai aplikasi pengubah lokasi.
+    </div>
+    <p>Mitra dengan skema per jam / per hari: catatan clock in–clock out Anda menjadi dasar perhitungan pembayaran, jadi pastikan keduanya lengkap.</p>
+</div>
+
+<div>
+    <h3>3.3 Cuti &amp; Izin Saya</h3>
+    <p>Buka menu <b>Cuti &amp; Izin Saya</b> (<span class="path">/cuti-saya</span>).</p>
+    <table>
+        <tr><th style="width:26%">Jenis</th><th>Siapa yang bisa mengajukan</th></tr>
+        <tr><td>Cuti Tahunan</td><td rowspan="3">Hanya entitas kerja yang <b>berhak cuti</b>. Cuti tahunan memotong kuota; sisa kuota tampil di halaman.</td></tr>
+        <tr><td>Cuti Melahirkan</td></tr>
+        <tr><td>Cuti Khusus</td></tr>
+        <tr><td>Izin Sakit</td><td rowspan="2">Semua entitas, termasuk yang tidak berhak cuti tahunan.</td></tr>
+        <tr><td>Izin Tanpa Gaji</td></tr>
+    </table>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Pada kartu <b>Ajukan cuti / izin</b>, pilih jenis, tanggal mulai dan selesai, lalu tulis alasan (opsional, tetapi membantu atasan memutuskan).</td></tr>
+        <tr><td class="num">2.</td><td>Kirim pengajuan. Status awal <b>pending</b> sampai diputuskan atasan atau HR.</td></tr>
+        <tr><td class="num">3.</td><td>Pantau status (<b>approved</b> / <b>rejected</b>) di daftar pengajuan. Pengajuan yang masih pending dapat dibatalkan.</td></tr>
+    </table>
+    <p class="small muted">Bila entitas Anda tidak berhak cuti tahunan, halaman menampilkan keterangannya dan sistem menolak pengajuan tersebut.</p>
+
+    <h3>3.4 Slip Gaji Saya</h3>
+    <p>Menu <b>Slip Gaji Saya</b> (<span class="path">/slip-gaji-saya</span>) menampilkan riwayat penerimaan hingga 24 periode terakhir.</p>
+    <ul>
+        <li><b>Slip gaji</b> — gaji pokok, tunjangan, lembur, potongan BPJS &amp; PPh 21, dan penerimaan bersih.</li>
+        <li><b>Voucher insentif</b> — khusus mitra skema penjualan: insentif per unit terjual dan bonus.</li>
+    </ul>
+    <p>Klik <span class="btn">PDF</span> pada periode yang diinginkan untuk mengunduh slip. Slip hanya terbit setelah HR menjalankan payroll periode itu.</p>
+
+    <h3>3.5 Pinjam Inventaris</h3>
+    <p>Menu <b>Pinjam Inventaris</b> (<span class="path">/inventaris-saya</span>) untuk meminjam aset perusahaan seperti laptop, kendaraan, atau perkakas.</p>
+    <div class="flow">
+        <span class="box">Ajukan</span><span class="arrow">→</span>
+        <span class="box">Disetujui HR</span><span class="arrow">→</span>
+        <span class="box">Serah terima</span><span class="arrow">→</span>
+        <span class="box">Dikembalikan</span>
+    </div>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Pada <b>Ajukan peminjaman</b>, pilih aset. Foto aset dan jumlah unit tersedia akan tampil untuk memastikan barangnya benar.</td></tr>
+        <tr><td class="num">2.</td><td>Isi jumlah, rencana tanggal kembali, dan keperluan, lalu klik <span class="btn">Kirim pengajuan</span>.</td></tr>
+        <tr><td class="num">3.</td><td>Setelah disetujui, unit dikunci untuk Anda. Ambil barang ke HR; HR mencatat kondisi saat serah terima.</td></tr>
+        <tr><td class="num">4.</td><td>Kembalikan sebelum jatuh tempo. Pinjaman yang lewat tempo ditandai <b>telat</b>.</td></tr>
+    </table>
+    <p class="small">Selama masih <b>Menunggu persetujuan</b>, pengajuan dapat dibatalkan lewat <span class="btn">Batalkan pengajuan</span>.</p>
+    <div class="warn small">Pinjaman yang belum dikembalikan akan <b>menahan proses clearance</b> saat Anda mengundurkan diri atau kontrak berakhir.</div>
+
+    <h3>3.6 Knowledge Center</h3>
+    <p>Menu <b>Knowledge Center</b> (<span class="path">/knowledge</span>) berisi pengumuman perusahaan (Informasi, Kebijakan, Penting) serta dokumen SOP, peraturan perusahaan, panduan, dan formulir. Isi yang tampil sudah disaring sesuai divisi dan entitas kerja Anda. Pengumuman yang disematkan selalu berada paling atas. Dokumen diunduh langsung dari halaman ini.</p>
+</div>
+
+<!-- ============================================================ 4 -->
+<div class="chapter">
+    <h2>4. Menu Atasan <span class="role r-mgr">MANAGER</span></h2>
+
+    <h3>4.1 Rekap Absensi &amp; verifikasi</h3>
+    <p>Menu <b>Rekap Absensi</b> (<span class="path">/absensi</span>) menampilkan kehadiran seluruh tim per tanggal: jam masuk/pulang, status (hadir, terlambat, absen), metode absen, kantor terdekat dan jaraknya, serta foto.</p>
+    <ul>
+        <li>Gunakan filter tanggal dan pencarian; centang <b>Tampilkan hanya yang ditandai fake GPS</b> untuk memeriksa absen yang mencurigakan.</li>
+        <li>Klik <span class="btn">Lihat foto</span> untuk membuka foto absensi.</li>
+    </ul>
+    <h4>Memverifikasi absen unggah foto</h4>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Cari absensi berstatus <b>Menunggu verifikasi</b>. Periksa foto, jarak dari kantor, dan alasan yang ditulis karyawan.</td></tr>
+        <tr><td class="num">2.</td><td>Pilih <b>Setujui</b> — status hadir/terlambat dihitung sesuai jam clock in — atau <b>Tolak</b>, maka hari itu dianggap <b>absen</b> dan tidak dihitung pada rekap maupun payroll. Tambahkan catatan bila perlu.</td></tr>
+    </table>
+    <p><b>Ekspor</b> tersedia: rekap absensi, rekap keterlambatan, dan timesheet mitra (lihat 5.12).</p>
+
+    <h3>4.2 Approval Cuti</h3>
+    <p>Menu <b>Approval Cuti</b> (<span class="path">/cuti</span>) berisi pengajuan cuti dan izin dari tim. Periksa jenis, rentang tanggal, dan alasan, lalu klik <span class="btn">Setujui</span> atau <span class="btn">Tolak</span>. Pengajuan dapat disaring menurut status, dan rekapnya bisa diekspor.</p>
+</div>
+
+<!-- ============================================================ 5 -->
+<div class="chapter">
+    <h2>5. Menu HR <span class="role r-hr">HR</span></h2>
+
+    <h3>5.1 Dashboard</h3>
+    <p>Ringkasan eksekutif: total tenaga kerja aktif, komposisi entitas kerja, cuti yang menunggu approval, biaya kompensasi 6 bulan terakhir, serta <b>peringatan kontrak</b> Probation/PKWT/Mitra yang berakhir dalam 30 hari. Gunakan daftar ini untuk memutuskan perpanjangan kontrak tepat waktu.</p>
+
+    <h3>5.2 Tenaga Kerja &amp; akun login</h3>
+    <p>Menu <b>Tenaga Kerja</b> (<span class="path">/employees</span>) adalah data induk seluruh karyawan dan mitra. Cari lewat nama/NIK/email, lalu saring menurut entitas, departemen, kategori, atau status.</p>
+    <h4>Menambah karyawan</h4>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Klik tambah, lalu isi <b>Identitas</b>: NIK karyawan, nama, email aktif, No WhatsApp, posisi, status PTKP (menentukan tarif TER PPh 21), dan departemen.</td></tr>
+        <tr><td class="num">2.</td><td><b>Data diri</b> boleh dikosongkan — karyawan dapat melengkapinya sendiri.</td></tr>
+        <tr><td class="num">3.</td><td>Isi <b>Entitas kerja &amp; kontrak</b>: entitas, status, tanggal bergabung, gaji pokok (mitra isi 0), serta tanggal kontrak mulai dan berakhir.</td></tr>
+        <tr><td class="num">4.</td><td>Klik <span class="btn">Simpan</span>. Bila email diisi, akun login dibuat otomatis dan <b>password sementara ditampilkan sekali saja</b> — catat dan sampaikan ke karyawan.</td></tr>
+    </table>
+    <p>Departemen yang tersedia: <b>Sales, Aftersales, HRGA, FAT, Marketing, Operasional</b>.</p>
+    <h4>Halaman detail karyawan</h4>
+    <ul>
+        <li><b>Informasi kepegawaian</b>, <b>Data diri</b> dengan persentase kelengkapan, dan <b>Dokumen kelengkapan</b>. HR dapat membuka, mengunggahkan, mengganti, atau menghapus dokumen atas nama karyawan.</li>
+        <li><b>Akun Login</b>: <span class="btn">Buatkan Akun Login</span> (bila belum ada), <span class="btn">Reset Password</span>, atau <span class="btn">Cabut Akun</span>. Password baru juga hanya tampil sekali.</li>
+        <li><b>Hak berdasarkan entitas</b>, skema mitra, proses keluar, dan riwayat 6 slip terakhir.</li>
+    </ul>
+
+    <h3>5.3 Entitas Kerja</h3>
+    <p>Menu <b>Entitas Kerja</b> (<span class="path">/entitas-kerja</span>) mengatur definisi Probation, PKWT, dan Mitra: kode, nama, durasi kontrak (bulan), <b>berhak cuti tahunan</b> beserta kuotanya, dan <b>terdaftar BPJS</b>. Aturan ini dibaca langsung oleh portal cuti dan mesin payroll.</p>
+    <div class="warn small">Perubahan aturan berlaku untuk perhitungan periode <b>berikutnya</b>. Slip yang sudah terbit tidak berubah kecuali payroll dijalankan ulang.</div>
+</div>
+
+<div>
+    <h3>5.4 Inventaris &amp; Peminjaman</h3>
+    <p>Menu <b>Inventaris</b> (<span class="path">/inventaris</span>) berisi katalog aset dan seluruh pinjaman.</p>
+    <h4>Mengelola katalog aset</h4>
+    <ul>
+        <li>Klik <span class="btn">Tambah aset</span>: kode, nama, kategori, jumlah unit, merek, nomor seri, kondisi, status (Aktif / Perbaikan / Dihapus), lokasi penyimpanan, harga dan tanggal perolehan.</li>
+        <li><b>Foto aset</b>: JPG/PNG/WEBP maksimal 2 MB. Foto tampil di katalog dan di portal peminjaman karyawan. Saat mengubah aset, foto dapat diganti atau dihapus.</li>
+        <li>Hanya aset berstatus <b>Aktif</b> yang bisa dipinjam. Aset yang masih punya pinjaman berjalan tidak dapat dihapus.</li>
+    </ul>
+    <h4>Memproses pinjaman</h4>
+    <table>
+        <tr><th style="width:28%">Status saat ini</th><th>Aksi yang tersedia</th></tr>
+        <tr><td>Menunggu persetujuan</td><td><span class="btn">Setujui</span> (stok langsung dikunci) atau <span class="btn">Tolak</span></td></tr>
+        <tr><td>Disetujui</td><td><span class="btn">Serahkan barang</span> sambil mencatat kondisi, atau <span class="btn">Tolak</span></td></tr>
+        <tr><td>Sedang dipinjam</td><td><span class="btn">Catat pengembalian</span> beserta kondisi, atau <span class="btn">Tandai hilang</span> (stok disesuaikan)</td></tr>
+    </table>
+    <p><span class="btn">Catat pinjaman</span> dipakai HR untuk mencatat pinjaman atas nama karyawan; statusnya langsung disetujui.</p>
+
+    <h3>5.5 Proses Keluar &amp; Paklaring</h3>
+    <p>Menu <b>Proses Keluar</b> (<span class="path">/proses-keluar</span>) untuk offboarding. Jenis: Mengundurkan Diri, Kontrak Berakhir, Pemutusan Hubungan Kerja, Pensiun.</p>
+    <div class="flow">
+        <span class="box">Catat (draft)</span><span class="arrow">→</span>
+        <span class="box">Clearance inventaris</span><span class="arrow">→</span>
+        <span class="box">Tuntaskan</span><span class="arrow">→</span>
+        <span class="box">Unduh paklaring PDF</span>
+    </div>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Klik <span class="btn">Catat proses keluar</span>, pilih karyawan aktif, jenis, tanggal pengajuan, hari kerja terakhir, dan alasan. Status <b>draft</b>: karyawan masih aktif dan data masih bisa diperbaiki.</td></tr>
+        <tr><td class="num">2.</td><td>Pastikan seluruh pinjaman inventaris karyawan sudah dikembalikan. Selama masih ada pinjaman terbuka, sistem <b>menolak</b> menuntaskan proses dan menyebutkan barang yang belum kembali.</td></tr>
+        <tr><td class="num">3.</td><td>Tuntaskan. Status karyawan berubah otomatis (resigned / expired), <b>nomor paklaring</b> terbit, dan PDF siap diunduh.</td></tr>
+    </table>
+    <p class="small">Nomor paklaring hanya diterbitkan sekali dan tetap sama saat dicetak ulang. <span class="btn">Buka kembali</span> mengembalikan proses ke draft dan mengaktifkan lagi karyawan, tetapi nomornya tidak dihapus.</p>
+
+    <h3>5.6 Payroll</h3>
+    <p>Menu <b>Payroll</b> (<span class="path">/payroll</span>). Payroll karyawan dipisah dari fee mitra.</p>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Pada <b>Jalankan periode penggajian</b>, pilih bulan dan tahun lalu jalankan. Sistem menghitung gaji pokok, tunjangan, lembur, BPJS (sesuai entitas), PPh 21 TER, serta fee mitra dari skema masing-masing.</td></tr>
+        <tr><td class="num">2.</td><td>Periksa daftar slip; klik slip untuk rincian.</td></tr>
+        <tr><td class="num">3.</td><td>Ubah status slip: <b>draft</b> → <b>approved</b> → <b>paid</b>. Karyawan dapat mengunduh slipnya di Slip Gaji Saya.</td></tr>
+    </table>
+    <div class="warn small">Menjalankan ulang periode yang sama menimpa slip draft/approved. Slip berstatus <b>paid</b> tidak ditimpa kecuali opsi <b>Timpa slip yang sudah dibayar</b> dicentang.</div>
+    <p>Ekspor khusus: rekap payroll, <b>file transfer bank</b>, dan <b>rekap pajak</b>.</p>
+</div>
+
+<div>
+    <h3>5.7 Skema Mitra</h3>
+    <p>Menu <b>Skema Mitra</b> (<span class="path">/skema-mitra</span>) mengatur cara pembayaran setiap mitra. Pilih satu skema per mitra:</p>
+    <table>
+        <tr><th style="width:28%">Skema</th><th>Cara hitung</th></tr>
+        <tr><td>Fixed Project Fee</td><td>Dibayar penuh satu kali per periode proyek</td></tr>
+        <tr><td>Hourly Rate</td><td>Tarif × total jam kerja, ditarik otomatis dari timesheet absensi</td></tr>
+        <tr><td>Daily Rate</td><td>Tarif × jumlah hari hadir, ditarik otomatis dari absensi</td></tr>
+        <tr><td>Deliverable / Milestone</td><td>Pencairan bertahap; persentase diatur pada daftar milestone</td></tr>
+        <tr><td>Unit / Output</td><td>Tarif × jumlah unit yang diisi HR saat periode dijalankan</td></tr>
+        <tr><td>Kompensasi Penjualan</td><td>Uang makan &amp; transport (prorata hari hadir) + insentif per unit terjual + bonus tier UMP</td></tr>
+    </table>
+    <p>Setiap skema juga menentukan <b>skema pajak</b> (PPh 21 berkesinambungan, PPh 21 tidak berkesinambungan, atau PPh 23) dan persentasenya. Gunakan filter <b>Hanya yang belum diatur</b> untuk menemukan mitra tanpa skema.</p>
+
+    <h3>5.8 Penjualan Mitra</h3>
+    <p>Menu <b>Penjualan Mitra</b> (<span class="path">/penjualan</span>) untuk mitra berskema penjualan.</p>
+    <ul>
+        <li><b>Katalog produk</b>: nama produk dan insentif per unit. Produk nonaktif tidak tampil di form input.</li>
+        <li><b>Input unit terjual</b> per mitra per periode. Mengisi 0 menghapus baris penjualan tersebut.</li>
+        <li>Setelah input selesai, <b>jalankan ulang payroll</b> periode itu agar voucher insentif ikut diperbarui.</li>
+    </ul>
+
+    <h3>5.9 Lowongan</h3>
+    <p>Menu <b>Lowongan</b> (<span class="path">/lowongan</span>) adalah sumber data Portal Karier.</p>
+    <table>
+        <tr><th style="width:18%">Status</th><th>Arti</th></tr>
+        <tr><td><b>Draft</b></td><td>Hanya terlihat oleh HR. Aman untuk menyiapkan deskripsi sebelum tayang.</td></tr>
+        <tr><td><b>Terbuka</b></td><td>Tampil di Portal Karier dan menerima lamaran. Tanggal publikasi terisi otomatis saat pertama kali dibuka.</td></tr>
+        <tr><td><b>Ditutup</b></td><td>Hilang dari portal; pelamar yang sudah masuk tetap ada di pipeline.</td></tr>
+    </table>
+    <p class="small">Lowongan yang sudah punya pelamar tidak dapat dihapus — tutup saja agar riwayat rekrutmen tetap tersimpan.</p>
+
+    <h3>5.10 Rekrutmen (ATS)</h3>
+    <p>Menu <b>Rekrutmen</b> (<span class="path">/rekrutmen</span>) menampilkan pipeline pelamar per tahap:</p>
+    <div class="flow">
+        <span class="box">Applied</span><span class="arrow">→</span>
+        <span class="box">Screening</span><span class="arrow">→</span>
+        <span class="box">Interview</span><span class="arrow">→</span>
+        <span class="box">Offering</span><span class="arrow">→</span>
+        <span class="box">Hired</span>
+        <span class="arrow">&nbsp;·&nbsp;</span><span class="box">Rejected</span>
+    </div>
+    <ul>
+        <li>Buka profil kandidat untuk mengunduh CV, memindahkan tahap, dan menambah <b>catatan interview</b>. Riwayat perpindahan tahap tercatat.</li>
+        <li>Pada tahap offering, unduh <b>offering letter</b>.</li>
+        <li>Kandidat <b>Hired</b> dapat <b>dikonversi menjadi karyawan</b>: data induk dibuat (beserta akun login bila email tersedia — password sementara tampil sekali), lalu kontrak kerja dapat diunduh.</li>
+        <li>Pelamar yang sudah <b>Rejected</b> tidak dapat dipindahkan lagi.</li>
+    </ul>
+
+    <h3>5.11 Kelola Knowledge</h3>
+    <p>Menu <b>Kelola Knowledge</b> (<span class="path">/knowledge/kelola</span>):</p>
+    <ul>
+        <li><span class="btn">Buat pengumuman</span>: judul, isi, kategori (Informasi / Kebijakan / Penting), sematkan di atas, lalu terbitkan sekarang atau simpan sebagai draft.</li>
+        <li><span class="btn">Unggah dokumen</span>: judul, jenis (SOP / Peraturan / Panduan / Formulir), versi, berkas PDF/Word/Excel/PowerPoint maksimal 10 MB.</li>
+        <li><b>Ditujukan kepada</b>: seluruh perusahaan, divisi tertentu, atau entitas kerja tertentu. Konten yang bukan hak seseorang tidak pernah dikirim ke perangkatnya.</li>
+    </ul>
+
+    <div style="page-break-inside: avoid">
+    <h3>5.12 Ekspor data</h3>
+    <p>Tombol ekspor tersedia di halaman terkait dalam format <b>Excel (.xlsx)</b>, <b>CSV</b>, atau <b>PDF</b>. Ekspor mengikuti filter yang sedang aktif.</p>
+    <table>
+        <tr><th style="width:26%">Halaman</th><th>Laporan</th></tr>
+        <tr><td>Tenaga Kerja</td><td>Data induk tenaga kerja (Excel/CSV memuat data diri lengkap), rekap kontrak berakhir</td></tr>
+        <tr><td>Rekap Absensi</td><td>Absensi, keterlambatan, timesheet mitra</td></tr>
+        <tr><td>Approval Cuti</td><td>Rekap cuti &amp; izin</td></tr>
+        <tr><td>Payroll</td><td>Rekap payroll, transfer bank, rekap pajak</td></tr>
+        <tr><td>Lainnya</td><td>Pelamar, performa lowongan, conversion rate, proses keluar, penjualan, peminjaman inventaris</td></tr>
+    </table>
+    <div class="note small">Setiap unduhan dicatat (siapa, kapan, modul, format) sebagai jejak audit karena berisi data pribadi. Simpan berkas ekspor di tempat yang aman.</div>
+    </div>
+</div>
+
+<!-- ============================================================ 6 -->
+<div style="margin-top:26px">
+    <h2>6. Portal Karier untuk Pelamar</h2>
+    <p>Portal Karier dapat dibuka siapa saja tanpa login di <span class="path">/karier</span>. Bagikan tautan ini di media sosial atau situs perusahaan.</p>
+    <table class="step">
+        <tr><td class="num">1.</td><td>Pelamar memilih lowongan berstatus terbuka dan membaca deskripsi serta kualifikasinya.</td></tr>
+        <tr><td class="num">2.</td><td>Pelamar mengisi nama lengkap, email, nomor telepon, dan mengunggah CV (PDF/DOC/DOCX, maksimal 5 MB).</td></tr>
+        <tr><td class="num">3.</td><td>Lamaran masuk ke pipeline Rekrutmen pada tahap <b>Applied</b>.</td></tr>
+    </table>
+    <p class="small muted">Untuk mencegah spam, lamaran dari satu alamat jaringan (IP) dibatasi 5 per jam.</p>
+
+    <!-- ============================================================ 7 -->
+    <h2 class="chapter">7. Tanya Jawab &amp; Kendala Umum</h2>
+    <table>
+        <tr><th style="width:36%">Kendala</th><th>Solusi</th></tr>
+        <tr><td>“Izin lokasi ditolak” saat absen</td><td>Buka pengaturan situs di browser (ikon gembok di kolom alamat) → izinkan <b>Lokasi</b> dan <b>Kamera</b> → muat ulang halaman. Pastikan GPS ponsel menyala.</td></tr>
+        <tr><td>“Lokasi tidak terbaca”</td><td>Pindah ke area terbuka atau dekat jendela, tunggu beberapa detik, lalu tekan perbarui lokasi.</td></tr>
+        <tr><td>“Di luar radius absensi” padahal di kantor</td><td>Perbarui lokasi setelah akurasi GPS membaik. Bila tetap gagal, gunakan <b>Unggah foto</b> dengan alasan “GPS tidak akurat”.</td></tr>
+        <tr><td>Jam absen tercatat tidak sesuai</td><td>Aplikasi memakai zona waktu WITA. Laporkan ke HR bila selisihnya berulang.</td></tr>
+        <tr><td>Tidak bisa membuka menu, selalu diarahkan ke Ganti Password</td><td>Anda masih memakai password sementara. Ganti password terlebih dahulu (bagian 2.2).</td></tr>
+        <tr><td>Lupa password</td><td>Minta HR melakukan Reset Password.</td></tr>
+        <tr><td>Unggah dokumen gagal: “Ukuran berkas maksimal …”</td><td>Kecilkan berkas: scan ulang dengan resolusi lebih rendah, atau kompres PDF, mis. dengan fitur kompres di iLovePDF/Smallpdf.</td></tr>
+        <tr><td>Unggah dokumen gagal: “Format berkas harus PDF”</td><td>Ubah foto dokumen menjadi PDF lebih dulu. Hanya Foto Diri yang boleh berupa JPG/PNG.</td></tr>
+        <tr><td>Tidak bisa mengajukan cuti tahunan</td><td>Entitas kerja Anda tidak berhak cuti tahunan. Izin sakit dan izin tanpa gaji tetap tersedia. Tanyakan ke HR bila status entitas Anda sudah berubah.</td></tr>
+        <tr><td>Slip gaji periode ini belum ada</td><td>HR belum menjalankan payroll periode tersebut.</td></tr>
+        <tr><td>Departemen / posisi di Data Diri salah</td><td>Data kepegawaian hanya bisa diubah HR. Hubungi HR.</td></tr>
+        <tr><td>Muncul halaman “403”</td><td>Menu tersebut bukan hak peran Anda, atau akun belum tertaut ke data karyawan. Hubungi HR.</td></tr>
+    </table>
+
+    <div class="note">
+        <b>Butuh bantuan lebih lanjut?</b> Hubungi tim HRGA. Sertakan tangkapan layar kendala, jam kejadian, dan perangkat/browser yang dipakai agar dapat segera ditangani.
+    </div>
+</div>
+
+</body>
+</html>

@@ -45,6 +45,12 @@ type Row = {
     distance: number | null;
     isOutsideRadius: boolean;
     hasPhoto: boolean;
+    clockOutMethodLabel: string | null;
+    clockOutNote: string | null;
+    clockOutOffice: string | null;
+    clockOutDistance: number | null;
+    isClockOutOutsideRadius: boolean;
+    hasClockOutPhoto: boolean;
 };
 
 type Props = {
@@ -88,7 +94,9 @@ export default function AttendanceIndex({
 }: Props) {
     const [search, setSearch] = useState(filters.search ?? "");
 
-    function applyFilter(patch: Record<string, string | number | boolean | null>) {
+    function applyFilter(
+        patch: Record<string, string | number | boolean | null>,
+    ) {
         router.get(
             "/absensi",
             { ...filters, ...patch },
@@ -232,7 +240,10 @@ export default function AttendanceIndex({
                         >
                             <option value="">Semua divisi</option>
                             {options.departments.map((department) => (
-                                <option key={department.id} value={department.id}>
+                                <option
+                                    key={department.id}
+                                    value={department.id}
+                                >
                                     {department.name}
                                 </option>
                             ))}
@@ -443,9 +454,25 @@ export default function AttendanceIndex({
                                                         “{row.note}”
                                                     </p>
                                                 )}
+                                                {row.clockOutMethodLabel && (
+                                                    <p className="mt-1 max-w-xs text-[11px] text-ink-muted">
+                                                        Pulang:{" "}
+                                                        {
+                                                            row.clockOutMethodLabel
+                                                        }
+                                                        {row.isClockOutOutsideRadius &&
+                                                            (row.clockOutDistance !==
+                                                            null
+                                                                ? ` · ${angka(row.clockOutDistance)} m dari ${row.clockOutOffice ?? "kantor"}`
+                                                                : " · di luar radius")}
+                                                        {row.clockOutNote &&
+                                                            ` · “${row.clockOutNote}”`}
+                                                    </p>
+                                                )}
                                                 {row.verificationNote && (
                                                     <p className="mt-1 max-w-xs text-[11px] text-ink-muted">
-                                                        HR: {row.verificationNote}
+                                                        HR:{" "}
+                                                        {row.verificationNote}
                                                     </p>
                                                 )}
 
@@ -457,7 +484,19 @@ export default function AttendanceIndex({
                                                             rel="noreferrer"
                                                             className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
                                                         >
-                                                            Lihat foto
+                                                            {row.hasClockOutPhoto
+                                                                ? "Foto masuk"
+                                                                : "Lihat foto"}
+                                                        </a>
+                                                    )}
+                                                    {row.hasClockOutPhoto && (
+                                                        <a
+                                                            href={`/absensi/${row.id}/foto?jenis=pulang`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
+                                                        >
+                                                            Foto pulang
                                                         </a>
                                                     )}
                                                     {row.verification ===

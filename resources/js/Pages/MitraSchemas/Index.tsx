@@ -379,7 +379,7 @@ function SchemaBuilder({
                     <Input
                         type="number"
                         min={0}
-                        step={1000}
+                        step={1}
                         value={data.rate_per_unit}
                         onChange={(event) =>
                             setData("rate_per_unit", Number(event.target.value))
@@ -417,7 +417,7 @@ function SchemaBuilder({
                             <Input
                                 type="number"
                                 min={0}
-                                step={50000}
+                                step={1}
                                 value={data.monthly_allowance}
                                 onChange={(event) =>
                                     setData(
@@ -451,7 +451,7 @@ function SchemaBuilder({
                             <Input
                                 type="number"
                                 min={0}
-                                step={1000}
+                                step={1}
                                 value={data.ump_reference}
                                 onChange={(event) =>
                                     setData(
@@ -564,7 +564,7 @@ function SchemaBuilder({
                             <Input
                                 type="number"
                                 min={0}
-                                step={1000}
+                                step={1}
                                 value={data.bpjs_wage_base}
                                 onChange={(event) =>
                                     setData(
@@ -629,7 +629,7 @@ function SchemaBuilder({
                     <Input
                         type="number"
                         min={0}
-                        step={50000}
+                        step={1}
                         value={data.transport_allowance}
                         onChange={(event) =>
                             setData(
