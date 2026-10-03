@@ -20,6 +20,7 @@ use App\Models\Payroll;
 use App\Models\SalesProduct;
 use App\Models\SalesRecord;
 use App\Models\User;
+use App\Services\AttendanceService;
 use App\Services\ExitService;
 use App\Services\PayrollCalculator;
 use App\Support\TerTariff;
@@ -635,7 +636,7 @@ class HrisDemoSeeder extends Seeder
 
                 $lateMinutes = $status === 'late' ? mt_rand(5, 75) : 0;
                 $clockIn = in_array($status, ['present', 'late'], true)
-                    ? $date->setTime(8, 0)->addMinutes($lateMinutes)
+                    ? $date->setTime(AttendanceService::WORK_START_HOUR, AttendanceService::WORK_START_MINUTE)->addMinutes($lateMinutes)
                     : null;
                 $clockOut = $clockIn?->addMinutes(mt_rand(480, 620));
 

@@ -81,6 +81,7 @@ class AttendanceController extends Controller
                 'verificationLabels' => Attendance::VERIFICATION_LABELS,
             ],
             'stats' => $this->stats($request, $range),
+            'workStart' => AttendanceService::workStartLabel(),
         ]);
     }
 
@@ -97,6 +98,7 @@ class AttendanceController extends Controller
             ->first();
 
         return Inertia::render('Attendance/Me', [
+            'workStart' => AttendanceService::workStartLabel(),
             'employee' => [
                 'name' => $employee->full_name,
                 'nik' => $employee->nik,

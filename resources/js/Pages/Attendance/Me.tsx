@@ -41,6 +41,7 @@ type Props = {
         verificationNote: string | null;
     };
     offices: Office[];
+    workStart: string;
     history: {
         id: number;
         date: string;
@@ -67,6 +68,7 @@ export default function AttendanceMe({
     employee,
     today,
     offices,
+    workStart,
     history,
 }: Props) {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -303,7 +305,7 @@ export default function AttendanceMe({
                             <p className="mt-4 flex items-center gap-1.5 text-xs text-[#8a6100]">
                                 <IconClock className="h-3.5 w-3.5" />
                                 Terlambat {today.lateMinutes} menit dari jam
-                                masuk 08:00.
+                                masuk {workStart}.
                             </p>
                         )}
 
@@ -364,7 +366,7 @@ export default function AttendanceMe({
                                     description={
                                         clockInDone
                                             ? `Sudah clock in pukul ${today.clockIn}.`
-                                            : "Absen masuk saat mulai bekerja. Jam masuk 08:00."
+                                            : `Absen masuk saat mulai bekerja. Jam masuk ${workStart}.`
                                     }
                                     onClick={() => chooseAction("in")}
                                 />

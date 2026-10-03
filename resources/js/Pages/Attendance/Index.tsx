@@ -84,6 +84,7 @@ type Props = {
         uploadMode: number;
         rangeLabel: string;
     };
+    workStart: string;
 };
 
 export default function AttendanceIndex({
@@ -91,6 +92,7 @@ export default function AttendanceIndex({
     filters,
     options,
     stats,
+    workStart,
 }: Props) {
     const [search, setSearch] = useState(filters.search ?? "");
 
@@ -173,7 +175,7 @@ export default function AttendanceIndex({
                     <StatTile
                         label="Terlambat"
                         value={angka(stats.late)}
-                        caption="clock-in setelah 08:00"
+                        caption={`clock-in setelah ${workStart}`}
                         icon={<IconClock className="h-4 w-4" />}
                     />
                     <StatTile

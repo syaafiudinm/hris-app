@@ -19,7 +19,13 @@ class AttendanceService
     /** Batas jam masuk sebelum dihitung terlambat. */
     public const WORK_START_HOUR = 8;
 
-    public const WORK_START_MINUTE = 0;
+    public const WORK_START_MINUTE = 30;
+
+    /** Jam masuk dalam format HH:MM untuk ditampilkan di UI. */
+    public static function workStartLabel(): string
+    {
+        return sprintf('%02d:%02d', self::WORK_START_HOUR, self::WORK_START_MINUTE);
+    }
 
     /** Disk privat — foto absensi hanya dibuka lewat route ber-RBAC. */
     public const PHOTO_DISK = 'local';
