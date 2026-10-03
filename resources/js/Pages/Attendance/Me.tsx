@@ -508,14 +508,16 @@ export default function AttendanceMe({
                                                             <img
                                                                 src={photo}
                                                                 alt="Pratinjau selfie absensi"
-                                                                className="h-full w-full object-cover"
+                                                                className="h-full w-full -scale-x-100 object-cover"
                                                             />
                                                         ) : (
+                                                            // Dibalik hanya di layar agar terasa seperti kamera
+                                                            // selfie; foto yang dikirim tetap gambar asli.
                                                             <video
                                                                 ref={videoRef}
                                                                 playsInline
                                                                 muted
-                                                                className={`h-full w-full object-cover ${cameraOn ? "" : "hidden"}`}
+                                                                className={`h-full w-full -scale-x-100 object-cover ${cameraOn ? "" : "hidden"}`}
                                                             />
                                                         )}
                                                         {!photo &&
