@@ -64,6 +64,7 @@ type Props = {
     compensationTrend: CompensationRow[];
     attendanceToday: AttendanceToday;
     expiringContracts: ExpiringContract[];
+    canViewAllContracts: boolean;
     recruitmentPipeline: {
         stages: PipelineStage[];
         totalApplicants: number;
@@ -78,6 +79,7 @@ export default function Dashboard({
     compensationTrend,
     attendanceToday,
     expiringContracts,
+    canViewAllContracts,
     recruitmentPipeline,
     generatedAt,
 }: Props) {
@@ -126,7 +128,9 @@ export default function Dashboard({
                             </div>
                             <div>
                                 <dt className="text-[11px] text-ink-muted">
-                                    Kontrak berakhir H-30
+                                    {canViewAllContracts
+                                        ? "Kontrak berakhir H-30"
+                                        : "Kontrak Anda berakhir H-30"}
                                 </dt>
                                 <dd className="tabular mt-0.5 text-lg font-semibold text-ink">
                                     {angka(summary.expiringCount)}
@@ -202,22 +206,34 @@ export default function Dashboard({
                 {/* Kontrak & absensi */}
                 <section className="grid gap-5 xl:grid-cols-5">
                     <Card
-                        title="Peringatan kontrak kadaluarsa"
-                        subtitle="Probation, PKWT, dan Mitra yang berakhir dalam 30 hari"
+                        title={
+                            canViewAllContracts
+                                ? "Peringatan kontrak kadaluarsa"
+                                : "Status kontrak Anda"
+                        }
+                        subtitle={
+                            canViewAllContracts
+                                ? "Probation, PKWT, dan Mitra yang berakhir dalam 30 hari"
+                                : "Peringatan bila kontrak Anda berakhir dalam 30 hari"
+                        }
                         className="xl:col-span-3"
                         action={
-                            <button
-                                type="button"
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[11px] font-medium text-ink-soft transition hover:bg-surface-soft"
-                            >
-                                <IconDownload className="h-3.5 w-3.5" />
-                                Export
-                            </button>
+                            canViewAllContracts ? (
+                                <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-hairline px-2.5 py-1.5 text-[11px] font-medium text-ink-soft transition hover:bg-surface-soft"
+                                >
+                                    <IconDownload className="h-3.5 w-3.5" />
+                                    Export
+                                </button>
+                            ) : undefined
                         }
                     >
                         {expiringContracts.length === 0 ? (
                             <p className="py-6 text-center text-sm text-ink-muted">
-                                Tidak ada kontrak yang berakhir dalam 30 hari.
+                                {canViewAllContracts
+                                    ? "Tidak ada kontrak yang berakhir dalam 30 hari."
+                                    : "Kontrak Anda tidak berakhir dalam 30 hari ke depan."}
                             </p>
                         ) : (
                             <div className="overflow-x-auto">

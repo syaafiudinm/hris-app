@@ -8,6 +8,8 @@ use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\Payroll;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,16 +19,30 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $today = CarbonImmutable::today();
 
+        // Status kontrak semua pegawai hanya untuk admin; selain admin
+        // hanya melihat status kontraknya sendiri.
+        $user = $request->user();
+        $canViewAllContracts = (bool) $user?->isSuperAdmin();
+        $expiring = Employee::active()
+            ->expiringWithin(30)
+            ->when(
+                ! $canViewAllContracts,
+                // id -1 tidak pernah ada, jadi akun tanpa data tenaga kerja
+                // tidak melihat kontrak siapa pun.
+                fn (Builder $query) => $query->whereKey($user?->employee?->id ?? -1),
+            );
+
         return Inertia::render('Dashboard', [
-            'summary' => $this->summary($today),
+            'summary' => $this->summary($today, $expiring),
+            'canViewAllContracts' => $canViewAllContracts,
             'workforceDistribution' => $this->workforceDistribution(),
             'compensationTrend' => $this->compensationTrend($today),
             'attendanceToday' => $this->attendanceToday($today),
-            'expiringContracts' => $this->expiringContracts(),
+            'expiringContracts' => $this->expiringContracts($expiring),
             'recruitmentPipeline' => $this->recruitmentPipeline(),
             'generatedAt' => $today->translatedFormat('d F Y'),
         ]);
@@ -35,14 +51,13 @@ class DashboardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function summary(CarbonImmutable $today): array
+    private function summary(CarbonImmutable $today, Builder $expiring): array
     {
         $activeByCategory = Employee::active()
             ->join('employment_types', 'employment_types.id', '=', 'employees.employment_type_id')
             ->selectRaw('employment_types.category, count(*) as total')
             ->groupBy('employment_types.category')
             ->pluck('total', 'category');
-            
 
         $employeeCount = ($activeByCategory['probation'] ?? 0) + ($activeByCategory['pkwt'] ?? 0);
         $mitraCount = $activeByCategory['mitra'] ?? 0;
@@ -64,7 +79,7 @@ class DashboardController extends Controller
             'monthlyCostDelta' => $costDelta,
             'periodLabel' => $today->translatedFormat('F Y'),
             'pendingLeaves' => LeaveRequest::where('status', 'pending')->count(),
-            'expiringCount' => Employee::active()->expiringWithin(30)->count(),
+            'expiringCount' => (clone $expiring)->count(),
             'fakeGpsFlags' => Attendance::where('is_fake_gps', true)
                 ->where('date', '>=', $today->subDays(30))
                 ->count(),
@@ -169,13 +184,13 @@ class DashboardController extends Controller
 
     /**
      * Peringatan kontrak kadaluarsa H-30 (Probation, PKWT, dan Mitra).
+     * Cakupannya sudah dibatasi sesuai role lewat $expiring.
      *
      * @return list<array<string, mixed>>
      */
-    private function expiringContracts(): array
+    private function expiringContracts(Builder $expiring): array
     {
-        return Employee::active()
-            ->expiringWithin(30)
+        return (clone $expiring)
             ->with(['employmentType', 'department'])
             ->orderBy('contract_end')
             ->limit(8)
