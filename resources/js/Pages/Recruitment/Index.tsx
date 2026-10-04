@@ -7,15 +7,15 @@ import ExportMenu from "@/Components/ExportMenu";
 import ConversionModal, {
     type ConversionOptions,
 } from "@/Components/ConversionModal";
+import { Badge, Button, EmptyState, LinkButton, Select } from "@/Components/ui";
 import {
-    Badge,
-    Button,
-    EmptyState,
-    LinkButton,
-    Select,
-} from "@/Components/ui";
-import { IconFunnel, IconUsers, IconCheck, IconAlert } from "@/Components/Icons";
+    IconFunnel,
+    IconUsers,
+    IconCheck,
+    IconAlert,
+} from "@/Components/Icons";
 import { angka } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type ApplicantCard = {
     id: number;
@@ -70,7 +70,14 @@ const STAGE_COLORS: Record<string, string> = {
     hired: "border-t-[#104281]",
 };
 
-const ALL_STAGES = ["applied", "screening", "interview", "offering", "hired", "rejected"];
+const ALL_STAGES = [
+    "applied",
+    "screening",
+    "interview",
+    "offering",
+    "hired",
+    "rejected",
+];
 
 const STAGE_LABELS: Record<string, string> = {
     applied: "Applied",
@@ -93,7 +100,11 @@ export default function RecruitmentIndex({
     const [converting, setConverting] = useState<ApplicantCard | null>(null);
 
     function applyFilter(patch: Record<string, string | number | null>) {
-        router.get("/rekrutmen", { ...filters, ...patch }, { preserveState: true, replace: true });
+        router.get(
+            "/rekrutmen",
+            { ...filters, ...patch },
+            { preserveState: true, replace: true },
+        );
     }
 
     function moveStage(applicant: ApplicantCard, newStage: string) {
@@ -117,9 +128,18 @@ export default function RecruitmentIndex({
                 <div className="flex items-center gap-2">
                     <ExportMenu
                         targets={[
-                            { label: "Database Pelamar", url: "/export/pelamar" },
-                            { label: "Performa Lowongan", url: "/export/lowongan-performa" },
-                            { label: "Conversion Rate", url: "/export/conversion-rate" },
+                            {
+                                label: "Database Pelamar",
+                                url: "/export/pelamar",
+                            },
+                            {
+                                label: "Performa Lowongan",
+                                url: "/export/lowongan-performa",
+                            },
+                            {
+                                label: "Conversion Rate",
+                                url: "/export/conversion-rate",
+                            },
                         ]}
                         params={filters}
                     />
@@ -163,7 +183,11 @@ export default function RecruitmentIndex({
                     <Select
                         value={filters.vacancy_id ?? ""}
                         onChange={(e) =>
-                            applyFilter({ vacancy_id: e.target.value ? Number(e.target.value) : null })
+                            applyFilter({
+                                vacancy_id: e.target.value
+                                    ? Number(e.target.value)
+                                    : null,
+                            })
                         }
                         className="max-w-xs"
                     >
@@ -178,7 +202,11 @@ export default function RecruitmentIndex({
                     <Select
                         value={filters.department_id ?? ""}
                         onChange={(e) =>
-                            applyFilter({ department_id: e.target.value ? Number(e.target.value) : null })
+                            applyFilter({
+                                department_id: e.target.value
+                                    ? Number(e.target.value)
+                                    : null,
+                            })
                         }
                         className="max-w-xs"
                     >
@@ -191,9 +219,10 @@ export default function RecruitmentIndex({
                     </Select>
                 </div>
 
-                {/* Kanban board */}
+                {/* Kanban board — di HP kolom tahap ditumpuk vertikal agar
+                    tidak perlu digeser ke samping. */}
                 <div className="overflow-x-auto pb-4">
-                    <div className="flex gap-4" style={{ minWidth: "960px" }}>
+                    <div className="flex flex-col gap-4 sm:min-w-[960px] sm:flex-row">
                         {pipeline.map((stage) => (
                             <div
                                 key={stage.key}
@@ -207,7 +236,13 @@ export default function RecruitmentIndex({
                                         {stage.applicants.length}
                                     </span>
                                 </div>
-                                <div className="space-y-2 px-3 pb-3" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+                                <div
+                                    className="space-y-2 px-3 pb-3"
+                                    style={{
+                                        maxHeight: "65vh",
+                                        overflowY: "auto",
+                                    }}
+                                >
                                     {stage.applicants.length === 0 ? (
                                         <p className="py-6 text-center text-[11px] text-ink-muted">
                                             Kosong
@@ -217,7 +252,9 @@ export default function RecruitmentIndex({
                                             <KanbanCard
                                                 key={applicant.id}
                                                 applicant={applicant}
-                                                onMove={(stage) => moveStage(applicant, stage)}
+                                                onMove={(stage) =>
+                                                    moveStage(applicant, stage)
+                                                }
                                             />
                                         ))
                                     )}
@@ -250,8 +287,12 @@ export default function RecruitmentIndex({
                                         key={a.id}
                                         className="rounded-lg border border-hairline p-3"
                                     >
-                                        <p className="text-sm font-medium text-ink">{a.name}</p>
-                                        <p className="text-xs text-ink-muted">{a.vacancyTitle}</p>
+                                        <p className="text-sm font-medium text-ink">
+                                            {a.name}
+                                        </p>
+                                        <p className="text-xs text-ink-muted">
+                                            {a.vacancyTitle}
+                                        </p>
                                     </div>
                                 ))}
                             </div>
@@ -265,36 +306,62 @@ export default function RecruitmentIndex({
                 </Card>
 
                 {/* Lowongan overview */}
-                <Card title="Ringkasan Lowongan" subtitle="Semua lowongan beserta jumlah pelamar dan hired">
+                <Card
+                    title="Ringkasan Lowongan"
+                    subtitle="Semua lowongan beserta jumlah pelamar dan hired"
+                >
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[500px] text-sm">
+                        <StackedTable className="w-full min-w-[500px] text-sm">
                             <thead>
                                 <tr className="border-b border-hairline text-left text-xs text-ink-muted">
-                                    <th className="pb-2 font-medium">Lowongan</th>
+                                    <th className="pb-2 font-medium">
+                                        Lowongan
+                                    </th>
                                     <th className="pb-2 font-medium">Divisi</th>
-                                    <th className="pb-2 text-center font-medium">Pelamar</th>
-                                    <th className="pb-2 text-center font-medium">Hired</th>
+                                    <th className="pb-2 text-center font-medium">
+                                        Pelamar
+                                    </th>
+                                    <th className="pb-2 text-center font-medium">
+                                        Hired
+                                    </th>
                                     <th className="pb-2 font-medium">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {vacancies.map((v) => (
-                                    <tr key={v.id} className="border-b border-hairline last:border-0">
+                                    <tr
+                                        key={v.id}
+                                        className="border-b border-hairline last:border-0"
+                                    >
                                         <td className="py-2.5">
-                                            <p className="font-medium text-ink">{v.title}</p>
+                                            <p className="font-medium text-ink">
+                                                {v.title}
+                                            </p>
                                         </td>
-                                        <td className="py-2.5 text-ink-soft">{v.department ?? "-"}</td>
-                                        <td className="tabular py-2.5 text-center text-ink">{v.applicantCount}</td>
-                                        <td className="tabular py-2.5 text-center text-ink">{v.hiredCount}</td>
+                                        <td className="py-2.5 text-ink-soft">
+                                            {v.department ?? "-"}
+                                        </td>
+                                        <td className="tabular py-2.5 text-center text-ink">
+                                            {v.applicantCount}
+                                        </td>
+                                        <td className="tabular py-2.5 text-center text-ink">
+                                            {v.hiredCount}
+                                        </td>
                                         <td className="py-2.5">
-                                            <Badge tone={v.status === "open" ? "good" : "neutral"}>
+                                            <Badge
+                                                tone={
+                                                    v.status === "open"
+                                                        ? "good"
+                                                        : "neutral"
+                                                }
+                                            >
                                                 {v.status}
                                             </Badge>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </StackedTable>
                     </div>
                 </Card>
             </div>
@@ -320,10 +387,7 @@ function KanbanCard({
 }) {
     return (
         <div className="rounded-lg border border-hairline bg-surface p-3 transition hover:shadow-md hover:shadow-brand-700/5">
-            <Link
-                href={`/rekrutmen/${applicant.id}`}
-                className="block"
-            >
+            <Link href={`/rekrutmen/${applicant.id}`} className="block">
                 <p className="text-sm font-medium text-ink hover:text-brand-600 transition">
                     {applicant.name}
                 </p>
@@ -331,7 +395,9 @@ function KanbanCard({
                     {applicant.vacancyTitle}
                 </p>
                 {applicant.department && (
-                    <p className="text-[11px] text-ink-muted">{applicant.department}</p>
+                    <p className="text-[11px] text-ink-muted">
+                        {applicant.department}
+                    </p>
                 )}
             </Link>
 

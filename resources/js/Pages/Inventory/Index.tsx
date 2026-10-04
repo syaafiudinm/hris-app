@@ -17,6 +17,7 @@ import {
 } from "@/Components/ui";
 import { IconAlert, IconBox, IconCheck, IconClock } from "@/Components/Icons";
 import { angka, rupiah } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type Item = {
     id: number;
@@ -674,7 +675,7 @@ export default function InventoryIndex({
                                 <EmptyState message="Katalog aset masih kosong." />
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className="w-full min-w-[640px] text-left text-xs">
+                                    <StackedTable className="w-full min-w-[640px] text-left text-xs">
                                         <thead className="text-ink-muted">
                                             <tr className="border-b border-hairline">
                                                 <th className="pb-2 font-medium">
@@ -797,7 +798,7 @@ export default function InventoryIndex({
                                                 </tr>
                                             ))}
                                         </tbody>
-                                    </table>
+                                    </StackedTable>
                                 </div>
                             )}
                         </Card>

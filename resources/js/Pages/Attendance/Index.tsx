@@ -21,6 +21,7 @@ import {
     IconUpload,
 } from "@/Components/Icons";
 import { angka } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type Row = {
     id: number;
@@ -332,7 +333,7 @@ export default function AttendanceIndex({
                         <EmptyState message="Tidak ada catatan pada filter ini." />
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[820px] text-sm">
+                            <StackedTable className="w-full min-w-[820px] text-sm">
                                 <thead>
                                     <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                         <th className="pb-2 font-medium">
@@ -535,7 +536,7 @@ export default function AttendanceIndex({
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                            </StackedTable>
                         </div>
                     )}
 

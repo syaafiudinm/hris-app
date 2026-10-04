@@ -21,6 +21,7 @@ import {
     IconWallet,
 } from "@/Components/Icons";
 import { angka, rupiahCompact } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type Summary = {
     totalWorkforce: number;
@@ -237,7 +238,7 @@ export default function Dashboard({
                             </p>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[520px] text-sm">
+                                <StackedTable className="w-full min-w-[520px] text-sm">
                                     <thead>
                                         <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                             <th className="pb-2 font-medium">
@@ -299,7 +300,7 @@ export default function Dashboard({
                                             </tr>
                                         ))}
                                     </tbody>
-                                </table>
+                                </StackedTable>
                             </div>
                         )}
                     </Card>

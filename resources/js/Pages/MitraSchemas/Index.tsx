@@ -15,6 +15,7 @@ import {
 } from "@/Components/ui";
 import { IconAlert, IconWallet } from "@/Components/Icons";
 import { angka, rupiah } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type Schema = {
     id: number;
@@ -62,7 +63,8 @@ const SCHEMA_HINTS: Record<string, string> = {
 
 const TAX_LABELS: Record<string, string> = {
     pph21_berkesinambungan: "PPh 21 Bukan Pegawai (Berkesinambungan)",
-    pph21_tidak_berkesinambungan: "PPh 21 Bukan Pegawai (Tidak Berkesinambungan)",
+    pph21_tidak_berkesinambungan:
+        "PPh 21 Bukan Pegawai (Tidak Berkesinambungan)",
     pph23: "PPh 23",
     bebas_pajak: "Bebas Pajak",
 };
@@ -169,7 +171,7 @@ export default function MitraSchemasIndex({
                                 <EmptyState message="Tidak ada mitra pada filter ini." />
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className="w-full min-w-[640px] text-sm">
+                                    <StackedTable className="w-full min-w-[640px] text-sm">
                                         <thead>
                                             <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                                 <th className="pb-2 font-medium">
@@ -243,7 +245,7 @@ export default function MitraSchemasIndex({
                                                 </tr>
                                             ))}
                                         </tbody>
-                                    </table>
+                                    </StackedTable>
                                 </div>
                             )}
 
@@ -321,15 +323,14 @@ function SchemaBuilder({
         bpjs_wage_base:
             (existing?.components?.bpjs_wage_base as number) ??
             SALES_DEFAULTS.bpjs_wage_base,
-        bonus_tiers:
-            (existing?.components?.bonus_tiers as {
-                units: number;
-                percentage: number;
-            }[]) ?? [
-                { units: 2, percentage: 50 },
-                { units: 3, percentage: 75 },
-                { units: 4, percentage: 100 },
-            ],
+        bonus_tiers: (existing?.components?.bonus_tiers as {
+            units: number;
+            percentage: number;
+        }[]) ?? [
+            { units: 2, percentage: 50 },
+            { units: 3, percentage: 75 },
+            { units: 4, percentage: 100 },
+        ],
     });
 
     const isSales = data.schema_type === "sales";
@@ -375,29 +376,32 @@ function SchemaBuilder({
                 </Field>
 
                 {!isSales && (
-                <Field label="Tarif" error={errors.rate_per_unit} required>
-                    <Input
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={data.rate_per_unit}
-                        onChange={(event) =>
-                            setData("rate_per_unit", Number(event.target.value))
-                        }
-                    />
-                </Field>
+                    <Field label="Tarif" error={errors.rate_per_unit} required>
+                        <Input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={data.rate_per_unit}
+                            onChange={(event) =>
+                                setData(
+                                    "rate_per_unit",
+                                    Number(event.target.value),
+                                )
+                            }
+                        />
+                    </Field>
                 )}
 
                 {!isSales && (
-                <Field label="Satuan" error={errors.unit_label}>
-                    <Input
-                        value={data.unit_label}
-                        onChange={(event) =>
-                            setData("unit_label", event.target.value)
-                        }
-                        placeholder="jam / hari / artikel"
-                    />
-                </Field>
+                    <Field label="Satuan" error={errors.unit_label}>
+                        <Input
+                            value={data.unit_label}
+                            onChange={(event) =>
+                                setData("unit_label", event.target.value)
+                            }
+                            placeholder="jam / hari / artikel"
+                        />
+                    </Field>
                 )}
 
                 {isSales && (
@@ -428,7 +432,10 @@ function SchemaBuilder({
                             />
                         </Field>
 
-                        <Field label="Hari kerja per bulan" error={errors.working_days}>
+                        <Field
+                            label="Hari kerja per bulan"
+                            error={errors.working_days}
+                        >
                             <Input
                                 type="number"
                                 min={1}
@@ -477,7 +484,9 @@ function SchemaBuilder({
                                             min={1}
                                             value={tier.units}
                                             onChange={(event) => {
-                                                const next = [...data.bonus_tiers];
+                                                const next = [
+                                                    ...data.bonus_tiers,
+                                                ];
                                                 next[index] = {
                                                     ...tier,
                                                     units: Number(
@@ -495,7 +504,9 @@ function SchemaBuilder({
                                             min={0}
                                             value={tier.percentage}
                                             onChange={(event) => {
-                                                const next = [...data.bonus_tiers];
+                                                const next = [
+                                                    ...data.bonus_tiers,
+                                                ];
                                                 next[index] = {
                                                     ...tier,
                                                     percentage: Number(

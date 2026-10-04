@@ -16,6 +16,7 @@ import {
 } from "@/Components/ui";
 import { IconAlert, IconUsers } from "@/Components/Icons";
 import { angka, rupiahCompact } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type Row = {
     id: number;
@@ -128,7 +129,9 @@ export default function EmployeesIndex({
                         >
                             <Input
                                 value={search}
-                                onChange={(event) => setSearch(event.target.value)}
+                                onChange={(event) =>
+                                    setSearch(event.target.value)
+                                }
                                 placeholder="Cari nama, NIK, email…"
                             />
                         </form>
@@ -175,7 +178,10 @@ export default function EmployeesIndex({
                         >
                             <option value="">Semua divisi</option>
                             {options.departments.map((department) => (
-                                <option key={department.id} value={department.id}>
+                                <option
+                                    key={department.id}
+                                    value={department.id}
+                                >
                                     {department.name}
                                 </option>
                             ))}
@@ -202,10 +208,12 @@ export default function EmployeesIndex({
                         <EmptyState message="Tidak ada data pada filter ini." />
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[860px] text-sm">
+                            <StackedTable className="w-full min-w-[860px] text-sm">
                                 <thead>
                                     <tr className="border-b border-hairline text-left text-xs text-ink-muted">
-                                        <th className="pb-2 font-medium">Nama</th>
+                                        <th className="pb-2 font-medium">
+                                            Nama
+                                        </th>
                                         <th className="pb-2 font-medium">
                                             Jabatan
                                         </th>
@@ -269,8 +277,9 @@ export default function EmployeesIndex({
                                             <td className="py-2.5">
                                                 <Badge
                                                     tone={
-                                                        statusTone[row.status] ??
-                                                        "neutral"
+                                                        statusTone[
+                                                            row.status
+                                                        ] ?? "neutral"
                                                     }
                                                 >
                                                     {row.status}
@@ -279,7 +288,7 @@ export default function EmployeesIndex({
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                            </StackedTable>
                         </div>
                     )}
 

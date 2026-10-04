@@ -16,10 +16,21 @@ import {
 } from "@/Components/ui";
 import { IconShield, IconWallet } from "@/Components/Icons";
 import { angka, rupiah, rupiahCompact } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 const MONTHS = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
 ];
 
 type Row = {
@@ -221,7 +232,9 @@ export default function PayrollIndex({
                         <Select
                             value={filters.month}
                             onChange={(event) =>
-                                applyFilter({ month: Number(event.target.value) })
+                                applyFilter({
+                                    month: Number(event.target.value),
+                                })
                             }
                         >
                             {MONTHS.map((label, index) => (
@@ -233,7 +246,9 @@ export default function PayrollIndex({
                         <Select
                             value={filters.year}
                             onChange={(event) =>
-                                applyFilter({ year: Number(event.target.value) })
+                                applyFilter({
+                                    year: Number(event.target.value),
+                                })
                             }
                         >
                             {options.years.map((year) => (
@@ -289,7 +304,7 @@ export default function PayrollIndex({
                         <EmptyState message="Belum ada slip pada periode ini. Jalankan payroll terlebih dahulu." />
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[860px] text-sm">
+                            <StackedTable className="w-full min-w-[860px] text-sm">
                                 <thead>
                                     <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                         <th className="pb-2 font-medium">
@@ -329,7 +344,8 @@ export default function PayrollIndex({
                                                 <p className="text-xs text-ink-muted">
                                                     {row.nik} · {row.type}
                                                 </p>
-                                                {row.slipType === "incentive" && (
+                                                {row.slipType ===
+                                                    "incentive" && (
                                                     <span className="mt-1 inline-flex rounded-md bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-700">
                                                         slip insentif penjualan
                                                     </span>
@@ -352,8 +368,9 @@ export default function PayrollIndex({
                                             <td className="py-2.5">
                                                 <Badge
                                                     tone={
-                                                        statusTone[row.status] ??
-                                                        "neutral"
+                                                        statusTone[
+                                                            row.status
+                                                        ] ?? "neutral"
                                                     }
                                                 >
                                                     {row.status}
@@ -364,9 +381,11 @@ export default function PayrollIndex({
                                                     href={`/slip-gaji/${row.id}/dokumen`}
                                                     className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
                                                 >
-                                                    {row.slipType === "incentive"
+                                                    {row.slipType ===
+                                                    "incentive"
                                                         ? "Voucher insentif"
-                                                        : row.payoutType === "mitra"
+                                                        : row.payoutType ===
+                                                            "mitra"
                                                           ? "Voucher"
                                                           : "Slip"}{" "}
                                                     PDF
@@ -375,7 +394,7 @@ export default function PayrollIndex({
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                            </StackedTable>
                         </div>
                     )}
 

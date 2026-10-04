@@ -2,6 +2,7 @@ import { useState } from "react";
 import { compact, rupiah, rupiahCompact } from "@/lib/format";
 import { Tooltip, useTooltip } from "./Tooltip";
 import ViewToggle from "./ViewToggle";
+import StackedTable from "@/Components/StackedTable";
 
 export type CompensationRow = {
     label: string;
@@ -52,7 +53,7 @@ export default function CompensationColumns({
 
             {view === "table" ? (
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[420px] text-sm">
+                    <StackedTable className="w-full min-w-[420px] text-sm">
                         <thead>
                             <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                 <th className="pb-2 font-medium">Periode</th>
@@ -83,12 +84,14 @@ export default function CompensationColumns({
                                         {rupiahCompact(row.mitra)}
                                     </td>
                                     <td className="tabular py-2 text-right font-medium text-ink">
-                                        {rupiahCompact(row.employee + row.mitra)}
+                                        {rupiahCompact(
+                                            row.employee + row.mitra,
+                                        )}
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
+                    </StackedTable>
                 </div>
             ) : (
                 <div data-chart-root className="relative">
@@ -217,7 +220,16 @@ export default function CompensationColumns({
 function niceMax(value: number): number {
     const magnitude = 10 ** Math.floor(Math.log10(value));
     const scaled = value / magnitude;
-    const step = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 2.5 ? 2.5 : scaled <= 5 ? 5 : 10;
+    const step =
+        scaled <= 1
+            ? 1
+            : scaled <= 2
+              ? 2
+              : scaled <= 2.5
+                ? 2.5
+                : scaled <= 5
+                  ? 5
+                  : 10;
 
     return step * magnitude;
 }

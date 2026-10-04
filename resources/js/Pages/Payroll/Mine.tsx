@@ -3,6 +3,7 @@ import Card from "@/Components/Card";
 import AppLayout from "@/Layouts/AppLayout";
 import { Badge, EmptyState, statusTone } from "@/Components/ui";
 import { rupiah } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type Props = {
     payrolls: {
@@ -29,10 +30,12 @@ export default function PayrollMine({ payrolls }: Props) {
                     <EmptyState message="Belum ada slip yang diterbitkan untuk Anda." />
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[520px] text-sm">
+                        <StackedTable className="w-full min-w-[520px] text-sm">
                             <thead>
                                 <tr className="border-b border-hairline text-left text-xs text-ink-muted">
-                                    <th className="pb-2 font-medium">Periode</th>
+                                    <th className="pb-2 font-medium">
+                                        Periode
+                                    </th>
                                     <th className="pb-2 text-right font-medium">
                                         Bruto
                                     </th>
@@ -84,7 +87,7 @@ export default function PayrollMine({ payrolls }: Props) {
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </StackedTable>
                     </div>
                 )}
             </Card>

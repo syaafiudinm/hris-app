@@ -15,11 +15,8 @@ import {
 } from "@/Components/ui";
 import { IconBook, IconDownload } from "@/Components/Icons";
 import { angka } from "@/lib/format";
-import {
-    CATEGORY_LABELS,
-    CATEGORY_TONE,
-    type DocumentItem,
-} from "./Index";
+import { CATEGORY_LABELS, CATEGORY_TONE, type DocumentItem } from "./Index";
+import StackedTable from "@/Components/StackedTable";
 
 type ManagedAnnouncement = {
     id: number;
@@ -99,7 +96,9 @@ export default function KnowledgeManage({
             subtitle="Bulletin pengumuman dan repositori SOP/peraturan"
             actions={
                 <div className="flex items-center gap-2">
-                    <LinkButton href="/knowledge">Lihat sebagai pembaca</LinkButton>
+                    <LinkButton href="/knowledge">
+                        Lihat sebagai pembaca
+                    </LinkButton>
                     <Button
                         onClick={() => setEditing({ ...EMPTY_ANNOUNCEMENT })}
                     >
@@ -224,7 +223,9 @@ export default function KnowledgeManage({
                                                                 publish:
                                                                     !item.isPublished,
                                                             },
-                                                            { preserveScroll: true },
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
                                                         )
                                                     }
                                                 >
@@ -244,7 +245,9 @@ export default function KnowledgeManage({
                                                         ) {
                                                             router.delete(
                                                                 `/knowledge/pengumuman/${item.id}`,
-                                                                { preserveScroll: true },
+                                                                {
+                                                                    preserveScroll: true,
+                                                                },
                                                             );
                                                         }
                                                     }}
@@ -274,7 +277,7 @@ export default function KnowledgeManage({
                                 <EmptyState message="Belum ada dokumen." />
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className="w-full min-w-[620px] text-sm">
+                                    <StackedTable className="w-full min-w-[620px] text-sm">
                                         <thead>
                                             <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                                 <th className="pb-2 font-medium">
@@ -331,7 +334,9 @@ export default function KnowledgeManage({
                                                                     ) {
                                                                         router.delete(
                                                                             `/knowledge/dokumen/${doc.id}`,
-                                                                            { preserveScroll: true },
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                            },
                                                                         );
                                                                     }
                                                                 }}
@@ -344,7 +349,7 @@ export default function KnowledgeManage({
                                                 </tr>
                                             ))}
                                         </tbody>
-                                    </table>
+                                    </StackedTable>
                                 </div>
                             )}
                         </Card>
@@ -385,7 +390,8 @@ export default function KnowledgeManage({
                                         <span className="font-medium text-ink">
                                             Entitas kerja tertentu
                                         </span>{" "}
-                                        — mis. khusus Mitra atau khusus Probation.
+                                        — mis. khusus Mitra atau khusus
+                                        Probation.
                                     </li>
                                 </ul>
 
@@ -424,7 +430,9 @@ function TargetFields({
             <Field label="Ditujukan kepada" error={errors.target_type} required>
                 <Select
                     value={targetType}
-                    onChange={(event) => onChange("target_type", event.target.value)}
+                    onChange={(event) =>
+                        onChange("target_type", event.target.value)
+                    }
                 >
                     {options.targetTypes.map((type) => (
                         <option key={type} value={type}>
@@ -435,7 +443,11 @@ function TargetFields({
             </Field>
 
             {targetType === "department" && (
-                <Field label="Divisi" error={errors.target_department_id} required>
+                <Field
+                    label="Divisi"
+                    error={errors.target_department_id}
+                    required
+                >
                     <Select
                         value={departmentId}
                         onChange={(event) =>
@@ -456,7 +468,11 @@ function TargetFields({
             )}
 
             {targetType === "employment_category" && (
-                <Field label="Entitas kerja" error={errors.target_category} required>
+                <Field
+                    label="Entitas kerja"
+                    error={errors.target_category}
+                    required
+                >
                     <Select
                         value={category}
                         onChange={(event) =>
@@ -520,7 +536,9 @@ function AnnouncementForm({
                 <Field label="Judul" error={errors.title} required>
                     <Input
                         value={data.title}
-                        onChange={(event) => setData("title", event.target.value)}
+                        onChange={(event) =>
+                            setData("title", event.target.value)
+                        }
                     />
                 </Field>
 
@@ -528,7 +546,9 @@ function AnnouncementForm({
                     <Textarea
                         rows={6}
                         value={data.body}
-                        onChange={(event) => setData("body", event.target.value)}
+                        onChange={(event) =>
+                            setData("body", event.target.value)
+                        }
                         placeholder="Tulis isi pengumuman…"
                     />
                 </Field>
@@ -638,7 +658,9 @@ function DocumentForm({
                 <Field label="Judul" error={errors.title} required>
                     <Input
                         value={data.title}
-                        onChange={(event) => setData("title", event.target.value)}
+                        onChange={(event) =>
+                            setData("title", event.target.value)
+                        }
                     />
                 </Field>
 

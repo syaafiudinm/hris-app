@@ -3,6 +3,7 @@ import Card from "@/Components/Card";
 import AppLayout from "@/Layouts/AppLayout";
 import { Badge, Button, Select, statusTone } from "@/Components/ui";
 import { rupiah } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type Props = {
     payroll: {
@@ -68,7 +69,12 @@ type PayrollDetails = {
     bonusPercentage?: number;
     umpReference?: number;
     // Slip insentif
-    lines?: { product: string; quantity: number; rate: number; subtotal: number }[];
+    lines?: {
+        product: string;
+        quantity: number;
+        rate: number;
+        subtotal: number;
+    }[];
     incentiveAmount?: number;
     taxAmount?: number;
 };
@@ -193,7 +199,6 @@ export default function PayrollShow({ payroll }: Props) {
                                 </tr>
                             </tbody>
                         </table>
-
                     </Card>
 
                     {payroll.details?.basis && (
@@ -227,7 +232,9 @@ export default function PayrollShow({ payroll }: Props) {
                                     )}
                                     <AmountRow
                                         label={`Tarif harian (÷ ${payroll.details.workingDays} hari)`}
-                                        value={payroll.details.dailyBaseRate ?? 0}
+                                        value={
+                                            payroll.details.dailyBaseRate ?? 0
+                                        }
                                     />
                                     <AmountRow
                                         label={`Dibayarkan (× ${payroll.details.presentDays} hari hadir)`}
@@ -239,10 +246,11 @@ export default function PayrollShow({ payroll }: Props) {
 
                             {payroll.details.basis === "bonus" && (
                                 <p className="mt-3 rounded-lg bg-surface-soft px-3 py-2 text-[11px] text-ink-soft">
-                                    Bonus pencapaian <strong>menggantikan</strong>{" "}
-                                    uang makan &amp; transport sebagai dasar gaji,
-                                    bukan menambahnya. Insentif per unit dibayar
-                                    penuh pada slip terpisah.
+                                    Bonus pencapaian{" "}
+                                    <strong>menggantikan</strong> uang makan
+                                    &amp; transport sebagai dasar gaji, bukan
+                                    menambahnya. Insentif per unit dibayar penuh
+                                    pada slip terpisah.
                                 </p>
                             )}
                         </Card>
@@ -264,7 +272,9 @@ export default function PayrollShow({ payroll }: Props) {
                                     ))}
                                     <AmountRow
                                         label="Total insentif"
-                                        value={payroll.details.incentiveAmount ?? 0}
+                                        value={
+                                            payroll.details.incentiveAmount ?? 0
+                                        }
                                         emphasis
                                     />
                                 </tbody>
@@ -278,7 +288,7 @@ export default function PayrollShow({ payroll }: Props) {
                             subtitle={`Dasar upah ${rupiah(payroll.details.bpjs.wageBase)} — tidak memotong penerimaan`}
                         >
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[460px] text-sm">
+                                <StackedTable className="w-full min-w-[460px] text-sm">
                                     <thead>
                                         <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                             <th className="pb-2 font-medium">
@@ -296,35 +306,45 @@ export default function PayrollShow({ payroll }: Props) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {payroll.details.bpjs.items.map((item) => (
-                                            <tr
-                                                key={item.label}
-                                                className="border-b border-hairline last:border-0"
-                                            >
-                                                <td className="py-2 text-ink-soft">
-                                                    {item.label}
-                                                </td>
-                                                <td className="tabular py-2 text-right text-ink">
-                                                    {rupiah(item.companyAmount)}
-                                                    <span className="block text-[10px] text-ink-muted">
-                                                        {item.companyRate}%
-                                                    </span>
-                                                </td>
-                                                <td className="tabular py-2 text-right text-ink">
-                                                    {item.workerRate > 0
-                                                        ? rupiah(item.workerAmount)
-                                                        : "—"}
-                                                    {item.workerRate > 0 && (
+                                        {payroll.details.bpjs.items.map(
+                                            (item) => (
+                                                <tr
+                                                    key={item.label}
+                                                    className="border-b border-hairline last:border-0"
+                                                >
+                                                    <td className="py-2 text-ink-soft">
+                                                        {item.label}
+                                                    </td>
+                                                    <td className="tabular py-2 text-right text-ink">
+                                                        {rupiah(
+                                                            item.companyAmount,
+                                                        )}
                                                         <span className="block text-[10px] text-ink-muted">
-                                                            {item.workerRate}%
+                                                            {item.companyRate}%
                                                         </span>
-                                                    )}
-                                                </td>
-                                                <td className="tabular py-2 text-right font-medium text-ink">
-                                                    {rupiah(item.total)}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                    <td className="tabular py-2 text-right text-ink">
+                                                        {item.workerRate > 0
+                                                            ? rupiah(
+                                                                  item.workerAmount,
+                                                              )
+                                                            : "—"}
+                                                        {item.workerRate >
+                                                            0 && (
+                                                            <span className="block text-[10px] text-ink-muted">
+                                                                {
+                                                                    item.workerRate
+                                                                }
+                                                                %
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="tabular py-2 text-right font-medium text-ink">
+                                                        {rupiah(item.total)}
+                                                    </td>
+                                                </tr>
+                                            ),
+                                        )}
                                         <tr>
                                             <td className="py-2 text-sm font-semibold text-ink">
                                                 Total
@@ -349,12 +369,13 @@ export default function PayrollShow({ payroll }: Props) {
                                             </td>
                                         </tr>
                                     </tbody>
-                                </table>
+                                </StackedTable>
                             </div>
 
                             <p className="mt-3 rounded-lg bg-surface-soft px-3 py-2 text-[11px] text-ink-soft">
-                                Porsi pekerja ikut dibayarkan perusahaan, sehingga
-                                potongan BPJS pada slip bernilai {rupiah(0)}.
+                                Porsi pekerja ikut dibayarkan perusahaan,
+                                sehingga potongan BPJS pada slip bernilai{" "}
+                                {rupiah(0)}.
                             </p>
                         </Card>
                     )}
@@ -366,7 +387,10 @@ export default function PayrollShow({ payroll }: Props) {
                             <Detail label="Nama" value={employee.name} />
                             <Detail label="NIK" value={employee.nik} />
                             <Detail label="Jabatan" value={employee.position} />
-                            <Detail label="Divisi" value={employee.department} />
+                            <Detail
+                                label="Divisi"
+                                value={employee.department}
+                            />
                             <div>
                                 <dt className="text-[11px] text-ink-muted">
                                     Entitas kerja

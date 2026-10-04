@@ -4,6 +4,7 @@ import Card from "@/Components/Card";
 import AppLayout from "@/Layouts/AppLayout";
 import { Badge, Button, Field, Input, Select } from "@/Components/ui";
 import { angka } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type EmploymentType = {
     id: number;
@@ -63,7 +64,7 @@ export default function EmploymentTypesIndex({
                         subtitle="Mengubah aturan berlaku untuk perhitungan periode berikutnya"
                     >
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[700px] text-sm">
+                            <StackedTable className="w-full min-w-[700px] text-sm">
                                 <thead>
                                     <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                         <th className="pb-2 font-medium">
@@ -114,7 +115,9 @@ export default function EmploymentTypesIndex({
                                             <td className="py-2.5">
                                                 {type.isLeaveEligible ? (
                                                     <span className="text-xs font-medium text-[#0a7a0a]">
-                                                        Ya · {type.annualLeaveQuota} hari
+                                                        Ya ·{" "}
+                                                        {type.annualLeaveQuota}{" "}
+                                                        hari
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs text-ink-muted">
@@ -150,7 +153,7 @@ export default function EmploymentTypesIndex({
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                            </StackedTable>
                         </div>
                     </Card>
                 </div>
@@ -179,8 +182,8 @@ export default function EmploymentTypesIndex({
                                 <span className="font-medium text-ink">
                                     BPJS dikecualikan
                                 </span>{" "}
-                                membuat mesin payroll menetapkan potongan pekerja
-                                dan kontribusi perusahaan ke nol.
+                                membuat mesin payroll menetapkan potongan
+                                pekerja dan kontribusi perusahaan ke nol.
                             </li>
                             <li>
                                 <span className="font-medium text-ink">
@@ -239,7 +242,9 @@ function EntityForm({
                 <Field label="Kode" error={errors.code} required>
                     <Input
                         value={data.code}
-                        onChange={(event) => setData("code", event.target.value)}
+                        onChange={(event) =>
+                            setData("code", event.target.value)
+                        }
                         placeholder="PKWT12"
                     />
                 </Field>
@@ -247,7 +252,9 @@ function EntityForm({
                 <Field label="Nama" error={errors.name} required>
                     <Input
                         value={data.name}
-                        onChange={(event) => setData("name", event.target.value)}
+                        onChange={(event) =>
+                            setData("name", event.target.value)
+                        }
                     />
                 </Field>
 

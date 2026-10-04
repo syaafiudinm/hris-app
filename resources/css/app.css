@@ -64,3 +64,78 @@ body {
 .tabular {
     font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Tabel bertumpuk untuk layar HP (komponen StackedTable): tiap baris jadi
+ * kartu, tiap sel jadi pasangan "label kolom — nilai". Sengaja ditulis di
+ * luar layer agar menimpa utilitas tabel seperti min-w-[…], text-right,
+ * dan whitespace-nowrap hanya pada breakpoint ini.
+ */
+@media (max-width: 639px) {
+    .table-stack {
+        min-width: 0;
+    }
+
+    .table-stack thead {
+        display: none;
+    }
+
+    .table-stack,
+    .table-stack tbody,
+    .table-stack tr {
+        display: block;
+        width: 100%;
+    }
+
+    .table-stack tbody tr {
+        margin-bottom: 0.625rem;
+        border: 1px solid var(--color-hairline);
+        border-radius: 0.75rem;
+        padding: 0.25rem 0.875rem;
+    }
+
+    .table-stack tbody tr:last-child {
+        margin-bottom: 0;
+    }
+
+    .table-stack td {
+        display: grid;
+        grid-template-columns: minmax(5.5rem, 38%) minmax(0, 1fr);
+        column-gap: 0.75rem;
+        padding: 0.5rem 0;
+        border-top: 1px solid var(--color-hairline);
+        text-align: left;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .table-stack td::before {
+        content: attr(data-label);
+        grid-row: 1 / span 20;
+        padding-top: 0.125rem;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--color-ink-muted);
+    }
+
+    .table-stack td > * {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    /* Sel pertama jadi judul kartu; sel tanpa label (mis. kolom aksi)
+       memakai lebar penuh. */
+    .table-stack td:first-child,
+    .table-stack td[data-label=""] {
+        display: block;
+    }
+
+    .table-stack td:first-child {
+        border-top: 0;
+    }
+
+    .table-stack td:first-child::before,
+    .table-stack td[data-label=""]::before {
+        content: none;
+    }
+}

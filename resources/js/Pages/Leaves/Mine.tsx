@@ -1,8 +1,18 @@
 import { Head, router, useForm } from "@inertiajs/react";
 import Card from "@/Components/Card";
 import AppLayout from "@/Layouts/AppLayout";
-import { Badge, Button, EmptyState, Field, Input, Select, Textarea, statusTone } from "@/Components/ui";
+import {
+    Badge,
+    Button,
+    EmptyState,
+    Field,
+    Input,
+    Select,
+    Textarea,
+    statusTone,
+} from "@/Components/ui";
 import { IconAlert, IconCheck } from "@/Components/Icons";
+import StackedTable from "@/Components/StackedTable";
 
 type LeaveRow = {
     id: number;
@@ -75,7 +85,12 @@ export default function LeavesMine({
                                 event.preventDefault();
                                 post("/cuti-saya", {
                                     preserveScroll: true,
-                                    onSuccess: () => reset("start_date", "end_date", "reason"),
+                                    onSuccess: () =>
+                                        reset(
+                                            "start_date",
+                                            "end_date",
+                                            "reason",
+                                        ),
                                 });
                             }}
                             className="space-y-4"
@@ -160,7 +175,7 @@ export default function LeavesMine({
                             <EmptyState message="Belum ada pengajuan." />
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[560px] text-sm">
+                                <StackedTable className="w-full min-w-[560px] text-sm">
                                     <thead>
                                         <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                             <th className="pb-2 font-medium">
@@ -206,15 +221,15 @@ export default function LeavesMine({
                                                     </Badge>
                                                 </td>
                                                 <td className="py-2.5 text-right">
-                                                    {row.status === "pending" && (
+                                                    {row.status ===
+                                                        "pending" && (
                                                         <button
                                                             type="button"
                                                             onClick={() =>
                                                                 router.delete(
                                                                     `/cuti-saya/${row.id}`,
                                                                     {
-                                                                        preserveScroll:
-                                                                            true,
+                                                                        preserveScroll: true,
                                                                     },
                                                                 )
                                                             }
@@ -227,7 +242,7 @@ export default function LeavesMine({
                                             </tr>
                                         ))}
                                     </tbody>
-                                </table>
+                                </StackedTable>
                             </div>
                         )}
                     </Card>
@@ -274,8 +289,9 @@ export default function LeavesMine({
                                 {policy.blockedReason}
                             </p>
                             <p className="mt-4 border-t border-hairline pt-4 text-xs text-ink-muted">
-                                Pengajuan cuti tahunan akan ditolak server dengan
-                                kode 403, bukan hanya disembunyikan dari tampilan.
+                                Pengajuan cuti tahunan akan ditolak server
+                                dengan kode 403, bukan hanya disembunyikan dari
+                                tampilan.
                             </p>
                         </div>
                     )}

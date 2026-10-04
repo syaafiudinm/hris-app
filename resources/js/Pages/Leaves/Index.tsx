@@ -16,6 +16,7 @@ import {
 } from "@/Components/ui";
 import { IconAlert, IconCheck, IconClock } from "@/Components/Icons";
 import { angka } from "@/lib/format";
+import StackedTable from "@/Components/StackedTable";
 
 type Row = {
     id: number;
@@ -174,7 +175,10 @@ export default function LeavesIndex({
                         >
                             <option value="">Semua divisi</option>
                             {options.departments.map((department) => (
-                                <option key={department.id} value={department.id}>
+                                <option
+                                    key={department.id}
+                                    value={department.id}
+                                >
                                     {department.name}
                                 </option>
                             ))}
@@ -185,7 +189,7 @@ export default function LeavesIndex({
                         <EmptyState message="Tidak ada pengajuan pada filter ini." />
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[840px] text-sm">
+                            <StackedTable className="w-full min-w-[840px] text-sm">
                                 <thead>
                                     <tr className="border-b border-hairline text-left text-xs text-ink-muted">
                                         <th className="pb-2 font-medium">
@@ -242,8 +246,9 @@ export default function LeavesIndex({
                                             <td className="py-2.5">
                                                 <Badge
                                                     tone={
-                                                        statusTone[row.status] ??
-                                                        "neutral"
+                                                        statusTone[
+                                                            row.status
+                                                        ] ?? "neutral"
                                                     }
                                                 >
                                                     {row.status}
@@ -285,7 +290,7 @@ export default function LeavesIndex({
                                         </tr>
                                     ))}
                                 </tbody>
-                            </table>
+                            </StackedTable>
                         </div>
                     )}
 
