@@ -261,7 +261,7 @@ export default function AttendanceMe({
             <div className="grid gap-5 xl:grid-cols-3">
                 <div className="space-y-5 xl:col-span-2">
                     <Card title="Status hari ini">
-                        <div className="grid gap-4 sm:grid-cols-4">
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                             <Metric
                                 label="Clock in"
                                 value={today.clockIn ?? "—"}
@@ -486,7 +486,7 @@ export default function AttendanceMe({
                                             <Button
                                                 variant="secondary"
                                                 onClick={requestLocation}
-                                                className="mt-3"
+                                                className="mt-3 w-full sm:w-auto"
                                             >
                                                 {position
                                                     ? "Perbarui lokasi"
@@ -551,10 +551,11 @@ export default function AttendanceMe({
                                                 </p>
                                             )}
 
-                                            <div className="mt-3 flex gap-2">
+                                            <div className="mt-3 flex flex-wrap items-center gap-2">
                                                 {mode === "live" ? (
                                                     photo ? (
                                                         <Button
+                                                            className="w-full sm:w-auto"
                                                             variant="secondary"
                                                             onClick={() => {
                                                                 setPhoto(null);
@@ -565,12 +566,14 @@ export default function AttendanceMe({
                                                         </Button>
                                                     ) : cameraOn ? (
                                                         <Button
+                                                            className="w-full sm:w-auto"
                                                             onClick={capture}
                                                         >
                                                             Ambil foto
                                                         </Button>
                                                     ) : (
                                                         <Button
+                                                            className="w-full sm:w-auto"
                                                             variant="secondary"
                                                             onClick={
                                                                 startCamera
@@ -584,8 +587,9 @@ export default function AttendanceMe({
                                                         <input
                                                             ref={fileRef}
                                                             type="file"
+                                                            // Tanpa atribut capture: di HP yang terbuka galeri
+                                                            // / pemilih berkas, bukan langsung kamera.
                                                             accept="image/*"
-                                                            capture="user"
                                                             className="hidden"
                                                             onChange={(event) =>
                                                                 pickFile(
@@ -596,17 +600,18 @@ export default function AttendanceMe({
                                                             }
                                                         />
                                                         <Button
+                                                            className="w-full sm:w-auto"
                                                             variant="secondary"
                                                             onClick={() =>
                                                                 fileRef.current?.click()
                                                             }
                                                         >
                                                             {upload
-                                                                ? "Ganti berkas"
-                                                                : "Pilih foto"}
+                                                                ? "Ganti foto"
+                                                                : "Pilih dari galeri"}
                                                         </Button>
                                                         {upload && (
-                                                            <span className="self-center truncate text-[11px] text-ink-muted">
+                                                            <span className="min-w-0 flex-1 self-center truncate text-[11px] text-ink-muted">
                                                                 {
                                                                     upload.file
                                                                         .name
@@ -643,6 +648,7 @@ export default function AttendanceMe({
                                         <Button
                                             onClick={submit}
                                             disabled={!canSubmit || submitting}
+                                            className="w-full py-2.5 sm:w-auto sm:py-2"
                                         >
                                             {submitting
                                                 ? "Mengirim…"
@@ -728,14 +734,17 @@ export default function AttendanceMe({
                                         key={row.id}
                                         className="flex items-center justify-between gap-3 text-xs"
                                     >
-                                        <span className="tabular text-ink-soft">
-                                            {row.date}
+                                        {/* Tanggal & jam ditumpuk agar muat di layar sempit. */}
+                                        <span className="min-w-0">
+                                            <span className="tabular block text-ink-soft">
+                                                {row.date}
+                                            </span>
+                                            <span className="tabular block text-[11px] text-ink-muted">
+                                                {row.clockIn ?? "—"} –{" "}
+                                                {row.clockOut ?? "—"}
+                                            </span>
                                         </span>
-                                        <span className="tabular text-ink-muted">
-                                            {row.clockIn ?? "—"} –{" "}
-                                            {row.clockOut ?? "—"}
-                                        </span>
-                                        <span className="flex items-center gap-1">
+                                        <span className="flex shrink-0 flex-wrap items-center justify-end gap-1">
                                             {row.verification === "pending" && (
                                                 <Badge tone="warning">
                                                     verifikasi
